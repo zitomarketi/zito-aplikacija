@@ -1,0 +1,54 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "Zito Korisnik",
+      "email": "korisnik@zito.mk",
+      "passwordHash": "$2b$10$ZGJREfXDkJt7VJ/0EuglW.2qr43NpoQPOXrE.3nZT9v9RwnThLn2e",
+      "points": 1280,
+      "coupons": 4,
+      "cardNumber": "6899512"
+    }
+  ],
+  "flyers": [
+    {
+      "id": "f1",
+      "title": "Ovosje i zelencuk",
+      "price": "49 den.",
+      "image": "flyers_grid.png"
+    },
+    {
+      "id": "f2",
+      "title": "Pijaloci",
+      "price": "99 den.",
+      "image": "flyers_grid.png"
+    },
+    {
+      "id": "f3",
+      "title": "Mlecni proizvodi",
+      "price": "119 den.",
+      "image": "flyers_grid.png"
+    },
+    {
+      "id": "f4",
+      "title": "Slatki i gricki",
+      "price": "79 den.",
+      "image": "flyers_grid.png"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "n1",
+      "title": "Zito",
+      "body": "Nov Zito letok e objaven.",
+      "createdAt": "pred 5 minuti"
+    },
+    {
+      "id": "n2",
+      "title": "Specijalna ponuda",
+      "body": "20% popust za lojalni korisnici.",
+      "createdAt": "denes"
+    }
+  ],
+  "pushTokens": []
+}

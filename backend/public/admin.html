@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zito Admin</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 24px;
+        background: #f1f1f1;
+        color: #111;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 14px;
+        max-width: 560px;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin: 6px 0;
+        border: 1px solid #bbb;
+        border-radius: 8px;
+        box-sizing: border-box;
+      }
+      button {
+        background: #0a8f43;
+        color: #fff;
+        border: 0;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      pre {
+        background: #0e1b12;
+        color: #d8f5df;
+        padding: 12px;
+        border-radius: 8px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Zito Admin Panel</h1>
+    <div class="card">
+      <label>Admin token</label>
+      <input id="token" value="zito-admin-123" />
+    </div>
+
+    <div class="card">
+      <h3>Add Flyer</h3>
+      <input id="flyerTitle" placeholder="Title" />
+      <input id="flyerPrice" placeholder="Price (e.g. 89 den.)" />
+      <button onclick="addFlyer()">Save Flyer</button>
+    </div>
+
+    <div class="card">
+      <h3>Add Notification</h3>
+      <input id="noteTitle" placeholder="Title" />
+      <input id="noteBody" placeholder="Body" />
+      <button onclick="addNotification()">Save Notification</button>
+    </div>
+
+    <div class="card">
+      <h3>Push Broadcast</h3>
+      <input id="pushTitle" placeholder="Title" />
+      <input id="pushBody" placeholder="Body" />
+      <button onclick="sendPush()">Send Push</button>
+    </div>
+
+    <pre id="out">Ready.</pre>
+
+    <script>
+      const base = location.origin;
+      const out = document.getElementById("out");
+
+      function adminHeaders() {
+        return {
+          "Content-Type": "application/json",
+          "x-admin-token": document.getElementById("token").value.trim(),
+        };
+      }
+
+      async function call(path, body) {
+        const res = await fetch(base + path, {
+          method: "POST",
+          headers: adminHeaders(),
+          body: JSON.stringify(body),
+        });
+        const text = await res.text();
+        out.textContent = path + "\n" + text;
+      }
+
+      async function addFlyer() {
+        await call("/admin/flyers", {
+          title: document.getElementById("flyerTitle").value,
+          price: document.getElementById("flyerPrice").value,
+        });
+      }
+
+      async function addNotification() {
+        await call("/admin/notifications", {
+          title: document.getElementById("noteTitle").value,
+          body: document.getElementById("noteBody").value,
+        });
+      }
+
+      async function sendPush() {
+        await call("/admin/push-broadcast", {
+          title: document.getElementById("pushTitle").value,
+          body: document.getElementById("pushBody").value,
+        });
+      }
+    </script>
+  </body>
+</html>
