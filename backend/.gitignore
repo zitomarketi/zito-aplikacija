@@ -1,2 +1,5 @@
 .env
 zito.db
+node_modules/
+npm-debug.log*
+yarn-error.log*
