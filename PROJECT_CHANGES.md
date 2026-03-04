@@ -1,6 +1,6 @@
 # Project Changes Log
 
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 ## 1) Initial project setup
 - Created mobile app in `zito-app` with Expo + TypeScript.
@@ -236,3 +236,30 @@ Last updated: 2026-03-03
   - added `backend/render.yaml` template for quick Render deployment with required env vars.
 - Documentation:
   - updated root `README.md` with production one-time setup flow (server deploy + OAuth callbacks + release build).
+
+## 25) Production OAuth and APK stabilization (March 4, 2026)
+- Render deployment fixed and running live (`zito-backend.onrender.com`).
+- Google OAuth configured end-to-end:
+  - Google consent + web client created.
+  - Backend env configured:
+    - `GOOGLE_CLIENT_ID`
+    - `GOOGLE_CLIENT_SECRET`
+- Facebook OAuth configured end-to-end:
+  - Facebook Login use case enabled.
+  - Valid redirect URI configured:
+    - `https://zito-backend.onrender.com/auth/oauth/facebook/callback`
+  - Backend env configured:
+    - `FACEBOOK_APP_ID`
+    - `FACEBOOK_APP_SECRET`
+- Verified on phone:
+  - `Најава со Google` opens provider login and returns to app.
+  - `Најава со Facebook` opens provider login and returns to app.
+
+## 26) Localhost fallback removal + release backup (March 4, 2026)
+- Fixed mobile config defaults to prevent accidental `localhost` OAuth/API usage in release:
+  - `zito-app/app.config.js` default API base changed to:
+    - `https://zito-backend.onrender.com`
+  - `zito-app/App.tsx` now ignores local API values (`localhost`, `127.0.0.1`, `10.0.2.2`) and falls back to Render URL.
+- Rebuilt and reinstalled release APK after fix.
+- Created release backup folder and archived final APK:
+  - `releases/zito-app-release-2026-03-04.apk`
