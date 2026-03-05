@@ -251,6 +251,8 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     lang_tr: "Türkçe",
     push_physical_device: "Push работи на физички уред.",
     push_no_permission: "Нема дозвола за push notifications.",
+    push_missing_project_id: "Push не е конфигуриран (недостасува EAS projectId).",
+    push_missing_firebase: "Push не е конфигуриран (недостасува Firebase google-services.json).",
     state_unregistered: "Нерегистрирано",
     state_backend_unavailable: "Backend моментално недостапен.",
     state_offline_demo: "Офлајн демо режим",
@@ -325,6 +327,8 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     lang_tr: "Turkish",
     push_physical_device: "Push works on a physical device.",
     push_no_permission: "No push notification permission.",
+    push_missing_project_id: "Push is not configured (missing EAS projectId).",
+    push_missing_firebase: "Push is not configured (missing Firebase google-services.json).",
     state_unregistered: "Not registered",
     state_backend_unavailable: "Backend is currently unavailable.",
     state_offline_demo: "Offline demo mode",
@@ -399,6 +403,8 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     lang_tr: "Turqisht",
     push_physical_device: "Push funksionon në pajisje fizike.",
     push_no_permission: "Nuk ka leje për njoftime push.",
+    push_missing_project_id: "Push nuk eshte konfiguruar (mungon EAS projectId).",
+    push_missing_firebase: "Push nuk eshte konfiguruar (mungon Firebase google-services.json).",
     state_unregistered: "I paregjistruar",
     state_backend_unavailable: "Backend për momentin i padisponueshëm.",
     state_offline_demo: "Modalitet demo offline",
@@ -473,6 +479,8 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     lang_tr: "Turkce",
     push_physical_device: "Push fiziksel cihazda calisir.",
     push_no_permission: "Push bildirimi izni yok.",
+    push_missing_project_id: "Push yapilandirilmamis (EAS projectId eksik).",
+    push_missing_firebase: "Push yapilandirilmamis (Firebase google-services.json eksik).",
     state_unregistered: "Kayitli degil",
     state_backend_unavailable: "Backend su an kullanilamiyor.",
     state_offline_demo: "Cevrimdisi demo modu",
@@ -556,7 +564,12 @@ function extractApiErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) return "";
   try {
     const parsed = JSON.parse(error.message);
-    if (parsed && typeof parsed.error === "string") return parsed.error;
+    if (parsed && Array.isArray(parsed.errors) && parsed.errors.length > 0) {
+      const firstError = parsed.errors.find((value: unknown) => typeof value === "string");
+      if (typeof firstError === "string" && firstError.trim()) return firstError.trim();
+    }
+    if (parsed && typeof parsed.detail === "string" && parsed.detail.trim()) return parsed.detail.trim();
+    if (parsed && typeof parsed.error === "string" && parsed.error.trim()) return parsed.error.trim();
   } catch {
     // Ignore parse errors and keep fallback.
   }
@@ -1204,7 +1217,21 @@ async function registerForPush(t: (key: string) => string): Promise<string> {
     Constants.expoConfig?.extra?.eas?.projectId ??
     Constants.easConfig?.projectId ??
     undefined;
-  const token = await Notifications.getExpoPushTokenAsync({ projectId });
+  let token;
+  try {
+    token = projectId
+      ? await Notifications.getExpoPushTokenAsync({ projectId })
+      : await Notifications.getExpoPushTokenAsync();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("Default FirebaseApp") || message.includes("no default options")) {
+      throw new Error("missing_firebase_config");
+    }
+    if (!projectId) {
+      throw new Error("missing_eas_project_id");
+    }
+    throw error;
+  }
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
       name: "default",
@@ -1480,7 +1507,21 @@ export default function App() {
       );
       await loadData(authToken);
       setPushState(t("state_push_test_sent"));
-    } catch {
+    } catch (error) {
+      const apiError = extractApiErrorMessage(error);
+      const errorMessage = error instanceof Error ? error.message : "";
+      if (errorMessage.includes("missing_eas_project_id")) {
+        setPushState(t("push_missing_project_id"));
+        return;
+      }
+      if (errorMessage.includes("missing_firebase_config")) {
+        setPushState(t("push_missing_firebase"));
+        return;
+      }
+      if (apiError) {
+        setPushState(`${t("state_push_error")} (${apiError})`);
+        return;
+      }
       setPushState(t("state_push_error"));
     }
   };
@@ -1524,7 +1565,16 @@ export default function App() {
         } else {
           setPushState(token);
         }
-      } catch {
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "";
+        if (errorMessage.includes("missing_eas_project_id")) {
+          setPushState(t("push_missing_project_id"));
+          return;
+        }
+        if (errorMessage.includes("missing_firebase_config")) {
+          setPushState(t("push_missing_firebase"));
+          return;
+        }
         setPushState(t("state_push_error"));
       }
     };

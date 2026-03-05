@@ -157,7 +157,21 @@ async function sendExpoPush(tokens, title, body) {
     body: JSON.stringify(messages),
   });
   const data = await response.json();
-  return { sent: tokens.length, data };
+  if (!response.ok) {
+    throw new Error(`Expo push HTTP ${response.status}: ${JSON.stringify(data)}`);
+  }
+
+  const tickets = Array.isArray(data?.data) ? data.data : [];
+  const errors = tickets
+    .filter((ticket) => ticket?.status === "error")
+    .map((ticket) => ticket?.details?.error || ticket?.message || "Unknown push ticket error");
+
+  return {
+    sent: tokens.length,
+    accepted: tickets.length - errors.length,
+    errors,
+    data,
+  };
 }
 
 app.get("/health", (_req, res) => {
@@ -370,6 +384,13 @@ app.post("/push/test", requireAuth, async (req, res) => {
 
   try {
     const pushResult = await sendExpoPush([normalizedToken], pushTitle, pushBody);
+    if (pushResult.errors && pushResult.errors.length > 0) {
+      return res.status(502).json({
+        ok: false,
+        error: "Push ticket error",
+        errors: pushResult.errors,
+      });
+    }
     await db.addNotification({
       id: `n${Date.now()}`,
       title: pushTitle,
