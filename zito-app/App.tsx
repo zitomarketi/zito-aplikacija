@@ -16,8 +16,10 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  type StyleProp,
   StyleSheet,
   Text,
+  type TextStyle,
   TextInput,
   useWindowDimensions,
   View,
@@ -33,6 +35,7 @@ type TabParamList = {
   Home: undefined;
   Flyers: undefined;
   Card: undefined;
+  Locations: undefined;
   Notifications: undefined;
   Profile: undefined;
 };
@@ -63,6 +66,14 @@ type CardData = {
   cardNumber: string;
   barcode: string;
   qrValue: string;
+};
+
+type MarketLocation = {
+  name: string;
+  city: string;
+  address: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 type ThemeMode = "light" | "dark";
@@ -226,23 +237,39 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tab_home: "Почетна",
     tab_flyers: "Летоци",
     tab_card: "Картичка",
+    tab_locations: "Локации",
     tab_notifications: "Известувања",
     tab_profile: "Профил",
     screen_flyers_title: "Дигитални флаери",
     screen_flyers_subtitle: "Истакнати производи и топ акции",
     screen_card_title: "Дигитална картичка",
     screen_card_subtitle: "Жито Клуб",
+    screen_locations_title: "Локации",
+    screen_locations_subtitle: "Интерактивни GPS локации по населено место",
+    locations_all: "Сите",
     screen_notifications_title: "Нотификации",
     screen_notifications_subtitle: "Директна и навремена комуникација",
     screen_profile_title: "Профил",
     screen_profile_subtitle: "Управување со сметка",
     name_label: "Име",
+    email_label: "Е-пошта",
     push_status_label: "Push статус",
+    profile_basic_section: "Основни податоци",
+    profile_password_section: "Ресетирање лозинка",
+    current_password_label: "Тековна лозинка",
+    new_password_label: "Нова лозинка",
+    confirm_password_label: "Потврди нова лозинка",
+    save_profile: "Сними податоци",
+    change_password: "Смени лозинка",
+    profile_status_label: "Статус",
     push_token_label: "Push токен",
     no_token: "Нема токен",
     register_push: "Регистрирај push",
     send_test_push: "Тест push нотификација",
     refresh_data: "Освежи податоци",
+    open_in_maps: "Отвори во мапа",
+    no_coordinates: "Нема GPS координати",
+    coordinates_label: "Координати",
     logout: "Одјава",
     language: "Јазик",
     lang_mk: "Македонски",
@@ -262,6 +289,14 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     state_push_error: "Грешка при push регистрација.",
     state_refreshed: "Освежено",
     state_refresh_error: "Не можам да освежам податоци.",
+    state_profile_saved: "Основните податоци се снимени.",
+    state_profile_email_exists: "Оваа е-пошта веќе постои.",
+    state_profile_error: "Не можам да ги снимам основните податоци.",
+    state_password_changed: "Лозинката е успешно сменета.",
+    state_password_error: "Не можам да ја сменам лозинката.",
+    state_password_mismatch: "Новата лозинка и потврдата не се совпаѓаат.",
+    state_password_too_short: "Новата лозинка мора да има најмалку 6 карактери.",
+    state_current_password_invalid: "Тековната лозинка е невалидна.",
     auth_oauth_failed: "OAuth најавата не успеа. Пробај повторно.",
     auth_oauth_data_missing: "OAuth најавата успеа, но backend податоците не се достапни.",
     auth_invalid_login: "Невалидна најава. Пробај повторно.",
@@ -302,23 +337,39 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tab_home: "Home",
     tab_flyers: "Flyers",
     tab_card: "Card",
+    tab_locations: "Locations",
     tab_notifications: "Alerts",
     tab_profile: "Profile",
     screen_flyers_title: "Digital Flyers",
     screen_flyers_subtitle: "Featured products and top deals",
     screen_card_title: "Digital Card",
     screen_card_subtitle: "Zito Club",
+    screen_locations_title: "Locations",
+    screen_locations_subtitle: "Interactive GPS locations by settlement",
+    locations_all: "All",
     screen_notifications_title: "Notifications",
     screen_notifications_subtitle: "Direct and timely communication",
     screen_profile_title: "Profile",
     screen_profile_subtitle: "Account management",
     name_label: "Name",
+    email_label: "Email",
     push_status_label: "Push status",
+    profile_basic_section: "Basic details",
+    profile_password_section: "Reset password",
+    current_password_label: "Current password",
+    new_password_label: "New password",
+    confirm_password_label: "Confirm new password",
+    save_profile: "Save details",
+    change_password: "Change password",
+    profile_status_label: "Status",
     push_token_label: "Push token",
     no_token: "No token",
     register_push: "Register push",
     send_test_push: "Send test push",
     refresh_data: "Refresh data",
+    open_in_maps: "Open in Maps",
+    no_coordinates: "No GPS coordinates",
+    coordinates_label: "Coordinates",
     logout: "Logout",
     language: "Language",
     lang_mk: "Macedonian",
@@ -338,6 +389,14 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     state_push_error: "Push registration error.",
     state_refreshed: "Refreshed",
     state_refresh_error: "Could not refresh data.",
+    state_profile_saved: "Basic details saved.",
+    state_profile_email_exists: "This email already exists.",
+    state_profile_error: "Could not save basic details.",
+    state_password_changed: "Password changed successfully.",
+    state_password_error: "Could not change password.",
+    state_password_mismatch: "New password and confirmation do not match.",
+    state_password_too_short: "New password must be at least 6 characters.",
+    state_current_password_invalid: "Current password is invalid.",
     auth_oauth_failed: "OAuth login failed. Try again.",
     auth_oauth_data_missing: "OAuth login succeeded, but backend data is unavailable.",
     auth_invalid_login: "Invalid login. Try again.",
@@ -378,23 +437,39 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tab_home: "Kreu",
     tab_flyers: "Fletë",
     tab_card: "Kartela",
+    tab_locations: "Lokacione",
     tab_notifications: "Njoftime",
     tab_profile: "Profili",
     screen_flyers_title: "Fletë Digjitale",
     screen_flyers_subtitle: "Produkte të theksuara dhe oferta kryesore",
     screen_card_title: "Kartelë Digjitale",
     screen_card_subtitle: "Zito Klub",
+    screen_locations_title: "Lokacione",
+    screen_locations_subtitle: "Lokacione interaktive GPS sipas vendbanimit",
+    locations_all: "Te gjitha",
     screen_notifications_title: "Njoftime",
     screen_notifications_subtitle: "Komunikim i drejtpërdrejtë dhe në kohë",
     screen_profile_title: "Profili",
     screen_profile_subtitle: "Menaxhim i llogarisë",
     name_label: "Emri",
+    email_label: "Email",
     push_status_label: "Statusi i push",
+    profile_basic_section: "Të dhënat bazë",
+    profile_password_section: "Rivendos fjalëkalimin",
+    current_password_label: "Fjalëkalimi aktual",
+    new_password_label: "Fjalëkalimi i ri",
+    confirm_password_label: "Konfirmo fjalëkalimin e ri",
+    save_profile: "Ruaj të dhënat",
+    change_password: "Ndrysho fjalëkalimin",
+    profile_status_label: "Statusi",
     push_token_label: "Push token",
     no_token: "Nuk ka token",
     register_push: "Regjistro push",
     send_test_push: "Dergo push test",
     refresh_data: "Rifresko të dhënat",
+    open_in_maps: "Hap në Maps",
+    no_coordinates: "Nuk ka koordinata GPS",
+    coordinates_label: "Koordinata",
     logout: "Dil",
     language: "Gjuha",
     lang_mk: "Maqedonisht",
@@ -414,6 +489,14 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     state_push_error: "Gabim gjatë regjistrimit push.",
     state_refreshed: "U rifreskua",
     state_refresh_error: "Nuk mund të rifreskoj të dhënat.",
+    state_profile_saved: "Të dhënat bazë u ruajtën.",
+    state_profile_email_exists: "Ky email ekziston tashmë.",
+    state_profile_error: "Nuk mund t'i ruaj të dhënat bazë.",
+    state_password_changed: "Fjalëkalimi u ndryshua me sukses.",
+    state_password_error: "Nuk mund të ndryshoj fjalëkalimin.",
+    state_password_mismatch: "Fjalëkalimi i ri dhe konfirmimi nuk përputhen.",
+    state_password_too_short: "Fjalëkalimi i ri duhet të ketë së paku 6 karaktere.",
+    state_current_password_invalid: "Fjalëkalimi aktual është i pavlefshëm.",
     auth_oauth_failed: "Hyrja OAuth dështoi. Provo përsëri.",
     auth_oauth_data_missing: "Hyrja OAuth u krye, por të dhënat backend mungojnë.",
     auth_invalid_login: "Hyrje e pavlefshme. Provo përsëri.",
@@ -454,23 +537,39 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tab_home: "Ana Sayfa",
     tab_flyers: "Brosurler",
     tab_card: "Kart",
+    tab_locations: "Konumlar",
     tab_notifications: "Bildirimler",
     tab_profile: "Profil",
     screen_flyers_title: "Dijital Brosurler",
     screen_flyers_subtitle: "One cikan urunler ve en iyi aksiyonlar",
     screen_card_title: "Dijital Kart",
     screen_card_subtitle: "Zito Kulup",
+    screen_locations_title: "Konumlar",
+    screen_locations_subtitle: "Yerlesim yerine gore etkilesimli GPS konumlari",
+    locations_all: "Tum",
     screen_notifications_title: "Bildirimler",
     screen_notifications_subtitle: "Dogrudan ve zamaninda iletisim",
     screen_profile_title: "Profil",
     screen_profile_subtitle: "Hesap yonetimi",
     name_label: "Ad",
+    email_label: "E-posta",
     push_status_label: "Push durumu",
+    profile_basic_section: "Temel bilgiler",
+    profile_password_section: "Sifre sifirlama",
+    current_password_label: "Mevcut sifre",
+    new_password_label: "Yeni sifre",
+    confirm_password_label: "Yeni sifreyi dogrula",
+    save_profile: "Bilgileri kaydet",
+    change_password: "Sifreyi degistir",
+    profile_status_label: "Durum",
     push_token_label: "Push token",
     no_token: "Token yok",
     register_push: "Push kaydet",
     send_test_push: "Test push gonder",
     refresh_data: "Veriyi yenile",
+    open_in_maps: "Haritada ac",
+    no_coordinates: "GPS koordinati yok",
+    coordinates_label: "Koordinatlar",
     logout: "Cikis",
     language: "Dil",
     lang_mk: "Makedonca",
@@ -490,6 +589,14 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     state_push_error: "Push kayit hatasi.",
     state_refreshed: "Yenilendi",
     state_refresh_error: "Veriler yenilenemedi.",
+    state_profile_saved: "Temel bilgiler kaydedildi.",
+    state_profile_email_exists: "Bu e-posta zaten var.",
+    state_profile_error: "Temel bilgiler kaydedilemedi.",
+    state_password_changed: "Sifre basariyla degistirildi.",
+    state_password_error: "Sifre degistirilemedi.",
+    state_password_mismatch: "Yeni sifre ve dogrulama ayni degil.",
+    state_password_too_short: "Yeni sifre en az 6 karakter olmali.",
+    state_current_password_invalid: "Mevcut sifre gecersiz.",
     auth_oauth_failed: "OAuth girisi basarisiz. Tekrar dene.",
     auth_oauth_data_missing: "OAuth girisi basarili ancak backend verisi kullanilamiyor.",
     auth_invalid_login: "Gecersiz giris. Tekrar dene.",
@@ -526,6 +633,51 @@ const logoImage = require("./assets/images/logo.png");
 const tiltedBadgeImage = require("./assets/images/sekogasverninavas_upscaled-removebg-preview.png");
 const bannerImage = require("./assets/images/home_banner.png");
 const flyersImage = require("./assets/images/flyers_grid.png");
+const rawMarketLocations = require("./assets/market_locations.json") as MarketLocation[];
+const marketLocations: MarketLocation[] = rawMarketLocations.map((item) => ({
+  name: String(item.name || "").trim(),
+  city: String(item.city || "").trim() || "Останати",
+  address: String(item.address || "").trim(),
+  lat: typeof item.lat === "number" ? item.lat : null,
+  lng: typeof item.lng === "number" ? item.lng : null,
+}));
+
+const CITY_ALIASES: Array<{ city: string; aliases: string[] }> = [
+  { city: "Велес", aliases: ["велес", "veles"] },
+  { city: "Скопје", aliases: ["скопје", "skopje"] },
+  { city: "Куманово", aliases: ["куманово", "kumanovo"] },
+  { city: "Тетово", aliases: ["тетово", "tetovo"] },
+  { city: "Кочани", aliases: ["кочани", "kocani"] },
+  { city: "Прилеп", aliases: ["прилеп", "prilep"] },
+  { city: "Штип", aliases: ["штип", "stip"] },
+  { city: "Битола", aliases: ["битола", "bitola"] },
+  { city: "Струмица", aliases: ["струмица", "strumica"] },
+  { city: "Кавадарци", aliases: ["кавадарци", "kavadarci"] },
+  { city: "Виница", aliases: ["виница", "vinica"] },
+  { city: "Делчево", aliases: ["делчево", "delcevo"] },
+  { city: "Гевгелија", aliases: ["гевгелија", "gevgelija"] },
+  { city: "Кичево", aliases: ["кичево", "kicevo"] },
+  { city: "Гостивар", aliases: ["гостивар", "gostivar"] },
+  { city: "Неготино", aliases: ["неготино", "negotino"] },
+  { city: "Валандово", aliases: ["валандово", "valandovo"] },
+  { city: "Росоман", aliases: ["росоман", "rosoman"] },
+  { city: "Демир Капија", aliases: ["демир капија", "demir kapija"] },
+  { city: "Свети Николе", aliases: ["свети николе", "sveti nikole"] },
+  { city: "Пробиштип", aliases: ["пробиштип", "probistip"] },
+  { city: "Петровец", aliases: ["петровец", "petrovec"] },
+  { city: "Илинден", aliases: ["илинден", "ilinden"] },
+  { city: "Драчево", aliases: ["драчево", "dracevo"] },
+];
+
+function resolveMarketCity(item: MarketLocation): string {
+  const raw = item.city.trim();
+  if (raw && raw !== "Останати") return raw;
+  const haystack = `${item.name} ${item.address}`.toLowerCase();
+  for (const entry of CITY_ALIASES) {
+    if (entry.aliases.some((alias) => haystack.includes(alias))) return entry.city;
+  }
+  return "Останати";
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -956,8 +1108,14 @@ function modeShadowColor(green: string) {
 }
 function FlyersScreen({ flyers }: { flyers: Flyer[] }) {
   const { t } = useI18n();
+  const { palette } = useAppTheme();
   return (
-    <ScreenWrap title={t("screen_flyers_title")} subtitle={t("screen_flyers_subtitle")}>
+    <ScreenWrap
+      title={t("screen_flyers_title")}
+      subtitle={t("screen_flyers_subtitle")}
+      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      subtitleStyle={styles.flyersScreenSubtitle}
+    >
       <FlatList
         data={flyers}
         keyExtractor={(item) => item.id}
@@ -980,7 +1138,12 @@ function CardScreen({ card }: { card: CardData }) {
   const { palette } = useAppTheme();
   const { t } = useI18n();
   return (
-    <ScreenWrap title={t("screen_card_title")} subtitle={t("screen_card_subtitle")}>
+    <ScreenWrap
+      title={t("screen_card_title")}
+      subtitle={t("screen_card_subtitle")}
+      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      subtitleStyle={styles.flyersScreenSubtitle}
+    >
       <View style={[styles.cardBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
         <Image source={logoImage} style={styles.cardLogo} resizeMode="contain" />
         <Text style={[styles.cardNumber, { color: palette.muted }]}>{card.cardNumber}</Text>
@@ -994,9 +1157,15 @@ function CardScreen({ card }: { card: CardData }) {
 }
 
 function NotificationsScreen({ notices }: { notices: Notice[] }) {
+  const { palette } = useAppTheme();
   const { t } = useI18n();
   return (
-    <ScreenWrap title={t("screen_notifications_title")} subtitle={t("screen_notifications_subtitle")}>
+    <ScreenWrap
+      title={t("screen_notifications_title")}
+      subtitle={t("screen_notifications_subtitle")}
+      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      subtitleStyle={styles.flyersScreenSubtitle}
+    >
       {notices.map((notice) => (
         <View key={notice.id} style={styles.notificationCard}>
           <Text style={styles.notificationTitle}>{notice.title}</Text>
@@ -1008,12 +1177,115 @@ function NotificationsScreen({ notices }: { notices: Notice[] }) {
   );
 }
 
+function LocationsScreen() {
+  const { palette } = useAppTheme();
+  const { t } = useI18n();
+
+  const sections = useMemo(() => {
+    const byCity = new Map<string, MarketLocation[]>();
+    for (const item of marketLocations) {
+      const city = resolveMarketCity(item);
+      if (!byCity.has(city)) byCity.set(city, []);
+      byCity.get(city)?.push({ ...item, city });
+    }
+    return Array.from(byCity.entries())
+      .map(([city, items]) => ({
+        city,
+        items: [...items].sort((a, b) => a.name.localeCompare(b.name, "mk")),
+      }))
+      .sort((a, b) => a.city.localeCompare(b.city, "mk"));
+  }, []);
+  const [selectedCity, setSelectedCity] = useState<string>("all");
+  const cityButtons = useMemo(() => ["all", ...sections.map((section) => section.city)], [sections]);
+  const visibleSections = useMemo(
+    () => sections.filter((section) => selectedCity === "all" || section.city === selectedCity),
+    [sections, selectedCity],
+  );
+
+  const openMaps = async (item: MarketLocation) => {
+    const hasCoords = typeof item.lat === "number" && typeof item.lng === "number";
+    const query = hasCoords
+      ? `${item.lat},${item.lng}`
+      : `${item.name} ${item.address} ${item.city} North Macedonia`;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    await Linking.openURL(mapsUrl);
+  };
+
+  return (
+    <ScreenWrap
+      title={t("screen_locations_title")}
+      subtitle={t("screen_locations_subtitle")}
+      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      subtitleStyle={styles.flyersScreenSubtitle}
+    >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locationCityChipsRow}>
+        {cityButtons.map((city) => {
+          const active = selectedCity === city;
+          return (
+            <Pressable
+              key={`city-chip-${city}`}
+              onPress={() => setSelectedCity(city)}
+              style={[
+                styles.locationCityChip,
+                {
+                  backgroundColor: active ? colors.green : palette.card,
+                  borderColor: active ? colors.green : palette.border,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.locationCityChipText,
+                  { color: active ? "#FFFFFF" : palette.text },
+                ]}
+              >
+                {city === "all" ? `📁 ${t("locations_all")}` : `📁 ${city}`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      {visibleSections.map((section) => (
+        <View key={section.city} style={styles.locationSection}>
+          <Text style={[styles.locationCityTitle, { color: palette.text }]}>{section.city}</Text>
+          {section.items.map((item) => {
+            const hasCoords = typeof item.lat === "number" && typeof item.lng === "number";
+            return (
+              <View
+                key={`${section.city}-${item.name}-${item.address}`}
+                style={[styles.locationCard, { backgroundColor: palette.card, borderColor: palette.border }]}
+              >
+                <Text style={[styles.locationName, { color: palette.text }]}>{item.name}</Text>
+                <Text style={[styles.locationAddress, { color: palette.muted }]}>
+                  {item.address || "-"}
+                </Text>
+                <Text style={[styles.locationCoords, { color: palette.muted }]}>
+                  {hasCoords
+                    ? `${t("coordinates_label")}: ${item.lat?.toFixed(6)}, ${item.lng?.toFixed(6)}`
+                    : t("no_coordinates")}
+                </Text>
+                <Pressable style={styles.locationMapBtn} onPress={() => void openMaps(item)}>
+                  <Ionicons name="location-outline" size={18} color={colors.green} />
+                  <Text style={styles.locationMapBtnText}>{t("open_in_maps")}</Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      ))}
+    </ScreenWrap>
+  );
+}
+
 function ProfileScreen({
   user,
   pushToken,
   pushState,
+  profileState,
   language,
   onSetLanguage,
+  onUpdateProfile,
+  onChangePassword,
   onRegisterPush,
   onSendTestPush,
   onRefresh,
@@ -1022,20 +1294,109 @@ function ProfileScreen({
   user: User;
   pushToken: string;
   pushState: string;
+  profileState: string;
   language: LanguageCode;
   onSetLanguage: (language: LanguageCode) => void;
+  onUpdateProfile: (name: string, email: string) => void;
+  onChangePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => void;
   onRegisterPush: () => void;
   onSendTestPush: () => void;
   onRefresh: () => void;
   onLogout: () => void;
 }) {
   const { t } = useI18n();
+  const { palette } = useAppTheme();
+  const [editName, setEditName] = useState(user.name);
+  const [editEmail, setEditEmail] = useState(user.email);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    setEditName(user.name);
+    setEditEmail(user.email);
+  }, [user.name, user.email]);
+
   return (
-    <ScreenWrap title={t("screen_profile_title")} subtitle={t("screen_profile_subtitle")}>
+    <ScreenWrap
+      title={t("screen_profile_title")}
+      subtitle={t("screen_profile_subtitle")}
+      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      subtitleStyle={styles.flyersScreenSubtitle}
+    >
       <InfoCard title={t("name_label")} value={user.name} />
-      <InfoCard title="Email" value={user.email} />
+      <InfoCard title={t("email_label")} value={user.email} />
       <InfoCard title={t("push_status_label")} value={pushState} />
       <InfoCard title={t("push_token_label")} value={pushToken || t("no_token")} />
+      <InfoCard title={t("profile_status_label")} value={profileState || "-"} />
+
+      <Text style={[styles.infoTitle, { marginTop: 10, color: palette.text }]}>{t("profile_basic_section")}</Text>
+      <TextInput
+        value={editName}
+        onChangeText={setEditName}
+        placeholder={t("name_placeholder")}
+        placeholderTextColor="#9A9A9A"
+        style={[styles.input, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
+      />
+      <TextInput
+        value={editEmail}
+        onChangeText={setEditEmail}
+        placeholder={t("email_placeholder")}
+        placeholderTextColor="#9A9A9A"
+        style={[styles.input, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="email-address"
+      />
+      <Pressable style={[styles.loginBtn, { marginTop: 0 }]} onPress={() => onUpdateProfile(editName.trim(), editEmail.trim())}>
+        <Ionicons name="save-outline" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("save_profile")}</Text>
+      </Pressable>
+
+      <Text style={[styles.infoTitle, { marginTop: 10, color: palette.text }]}>{t("profile_password_section")}</Text>
+      <TextInput
+        value={currentPassword}
+        onChangeText={setCurrentPassword}
+        placeholder={t("current_password_label")}
+        placeholderTextColor="#9A9A9A"
+        style={[styles.input, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
+        autoCapitalize="none"
+        autoCorrect={false}
+        secureTextEntry
+      />
+      <TextInput
+        value={newPassword}
+        onChangeText={setNewPassword}
+        placeholder={t("new_password_label")}
+        placeholderTextColor="#9A9A9A"
+        style={[styles.input, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
+        autoCapitalize="none"
+        autoCorrect={false}
+        secureTextEntry
+      />
+      <TextInput
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder={t("confirm_password_label")}
+        placeholderTextColor="#9A9A9A"
+        style={[styles.input, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
+        autoCapitalize="none"
+        autoCorrect={false}
+        secureTextEntry
+      />
+      <Pressable
+        style={[styles.loginBtn, { marginTop: 0 }]}
+        onPress={() => {
+          onChangePassword(currentPassword, newPassword, confirmPassword);
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        }}
+      >
+        <Ionicons name="lock-closed-outline" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("change_password")}</Text>
+      </Pressable>
+
       <Text style={[styles.infoTitle, { marginTop: 10 }]}>{t("language")}</Text>
       <View style={styles.langRow}>
         <Pressable style={[styles.langChip, language === "mk" && styles.langChipActive]} onPress={() => onSetLanguage("mk")}>
@@ -1085,10 +1446,14 @@ function ScreenWrap({
   title,
   subtitle,
   children,
+  titleStyle,
+  subtitleStyle,
 }: {
   title: string;
   subtitle: string;
   children: ReactNode;
+  titleStyle?: StyleProp<TextStyle>;
+  subtitleStyle?: StyleProp<TextStyle>;
 }) {
   const { palette } = useAppTheme();
   const tabBarHeight = useBottomTabBarHeight();
@@ -1100,8 +1465,8 @@ function ScreenWrap({
           { paddingBottom: tabBarHeight + 20 },
         ]}
       >
-        <Text style={[styles.screenTitle, { color: palette.text }]}>{title}</Text>
-        <Text style={[styles.screenSubtitle, { color: palette.muted }]}>{subtitle}</Text>
+        <Text style={[styles.screenTitle, { color: palette.text }, titleStyle]}>{title}</Text>
+        <Text style={[styles.screenSubtitle, { color: palette.muted }, subtitleStyle]}>{subtitle}</Text>
         {children}
       </ScrollView>
     </SafeAreaView>
@@ -1115,8 +1480,11 @@ function MainTabs({
   card,
   pushToken,
   pushState,
+  profileState,
   language,
   onSetLanguage,
+  onUpdateProfile,
+  onChangePassword,
   onRegisterPush,
   onSendTestPush,
   onRefresh,
@@ -1128,8 +1496,11 @@ function MainTabs({
   card: CardData;
   pushToken: string;
   pushState: string;
+  profileState: string;
   language: LanguageCode;
   onSetLanguage: (language: LanguageCode) => void;
+  onUpdateProfile: (name: string, email: string) => void;
+  onChangePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => void;
   onRegisterPush: () => void;
   onSendTestPush: () => void;
   onRefresh: () => void;
@@ -1165,6 +1536,7 @@ function MainTabs({
             Home: "home",
             Flyers: "pricetags",
             Card: "card",
+            Locations: "location",
             Notifications: "notifications",
             Profile: "person",
           };
@@ -1181,6 +1553,9 @@ function MainTabs({
       <Tab.Screen name="Card" options={{ title: t("tab_card") }}>
         {() => <CardScreen card={card} />}
       </Tab.Screen>
+      <Tab.Screen name="Locations" options={{ title: t("tab_locations") }}>
+        {() => <LocationsScreen />}
+      </Tab.Screen>
       <Tab.Screen name="Notifications" options={{ title: t("tab_notifications") }}>
         {() => <NotificationsScreen notices={notices} />}
       </Tab.Screen>
@@ -1190,8 +1565,11 @@ function MainTabs({
             user={user}
             pushToken={pushToken}
             pushState={pushState}
+            profileState={profileState}
             language={language}
             onSetLanguage={onSetLanguage}
+            onUpdateProfile={onUpdateProfile}
+            onChangePassword={onChangePassword}
             onRegisterPush={onRegisterPush}
             onSendTestPush={onSendTestPush}
             onRefresh={onRefresh}
@@ -1260,6 +1638,7 @@ export default function App() {
   const [card, setCard] = useState<CardData>(fallbackCard);
   const [pushToken, setPushToken] = useState("");
   const [pushState, setPushState] = useState(t("state_unregistered"));
+  const [profileState, setProfileState] = useState("-");
   const autoPushAttemptedRef = useRef(false);
 
   const saveSessionToken = async (token: string) => {
@@ -1418,6 +1797,7 @@ export default function App() {
       setAuthToken(res.token);
       await saveSessionToken(res.token);
       setUser(res.user);
+      setProfileState("-");
       setLoggedIn(true);
       await loadData(res.token);
     } catch {
@@ -1446,6 +1826,7 @@ export default function App() {
       setAuthToken(res.token);
       await saveSessionToken(res.token);
       setUser(res.user);
+      setProfileState("-");
       setLoggedIn(true);
       await loadData(res.token);
     } catch (error) {
@@ -1552,6 +1933,45 @@ export default function App() {
     }
   };
 
+  const handleUpdateProfile = async (name: string, email: string) => {
+    if (!authToken) return;
+    try {
+      const updated = await apiPost<User>(apiBase, "/me/profile", { name, email }, authToken);
+      setUser(updated);
+      setProfileState(t("state_profile_saved"));
+    } catch (error) {
+      const apiError = extractApiErrorMessage(error).toLowerCase();
+      if (apiError.includes("email already")) {
+        setProfileState(t("state_profile_email_exists"));
+        return;
+      }
+      setProfileState(t("state_profile_error"));
+    }
+  };
+
+  const handleChangePassword = async (currentPassword: string, newPassword: string, confirmPassword: string) => {
+    if (!authToken) return;
+    if (newPassword !== confirmPassword) {
+      setProfileState(t("state_password_mismatch"));
+      return;
+    }
+    if (newPassword.length < 6) {
+      setProfileState(t("state_password_too_short"));
+      return;
+    }
+    try {
+      await apiPost(apiBase, "/me/password", { currentPassword, newPassword }, authToken);
+      setProfileState(t("state_password_changed"));
+    } catch (error) {
+      const apiError = extractApiErrorMessage(error).toLowerCase();
+      if (apiError.includes("invalid current password")) {
+        setProfileState(t("state_current_password_invalid"));
+        return;
+      }
+      setProfileState(t("state_password_error"));
+    }
+  };
+
   const handleLogout = () => {
     setLoggedIn(false);
     setAuthToken("");
@@ -1559,6 +1979,7 @@ export default function App() {
     setAuthError("");
     setPushToken("");
     setPushState(t("state_unregistered"));
+    setProfileState("-");
     autoPushAttemptedRef.current = false;
     setUser(fallbackUser);
     setFlyers(fallbackFlyers);
@@ -1639,8 +2060,11 @@ export default function App() {
                 card={card}
                 pushToken={pushToken}
                 pushState={pushState}
+                profileState={profileState}
                 language={language}
                 onSetLanguage={setLanguage}
+                onUpdateProfile={handleUpdateProfile}
+                onChangePassword={handleChangePassword}
                 onRegisterPush={handlePushRegister}
                 onSendTestPush={handleSendTestPush}
                 onRefresh={handleRefresh}
@@ -1830,7 +2254,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F8F8",
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 999,
+    borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
@@ -1861,9 +2285,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loginLangChip: {
-    minWidth: 40,
-    height: 34,
-    borderRadius: 17,
+    minWidth: 56,
+    minHeight: 34,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
@@ -1923,15 +2348,18 @@ const styles = StyleSheet.create({
   },
   langRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: 8,
     marginTop: 8,
     marginBottom: 4,
   },
   langChip: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
@@ -1944,6 +2372,7 @@ const styles = StyleSheet.create({
     color: colors.gray,
     fontSize: 12,
     fontWeight: "700",
+    textAlign: "center",
   },
   langChipTextActive: {
     color: colors.green,
@@ -1960,7 +2389,7 @@ const styles = StyleSheet.create({
     top: 8,
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -2093,12 +2522,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: colors.dark,
+    textAlign: "center",
   },
   flyerPrice: {
     color: colors.green,
     fontSize: 16,
     fontWeight: "900",
     marginTop: 4,
+    textAlign: "center",
+  },
+  flyersScreenTitle: {
+    color: "#10964A",
+    fontSize: 30,
+    fontWeight: "900",
+    textAlign: "center",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 1,
+    includeFontPadding: false,
+  },
+  flyersScreenSubtitle: {
+    textAlign: "center",
   },
   cardBox: {
     backgroundColor: colors.card,
@@ -2171,6 +2614,68 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: colors.green,
     fontWeight: "700",
+  },
+  locationSection: {
+    marginBottom: 14,
+    gap: 8,
+  },
+  locationCityChipsRow: {
+    paddingBottom: 10,
+    gap: 8,
+  },
+  locationCityChip: {
+    borderWidth: 1,
+    borderRadius: 10,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    justifyContent: "center",
+  },
+  locationCityChipText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  locationCityTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+  locationCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    gap: 4,
+  },
+  locationName: {
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  locationAddress: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  locationCoords: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  locationMapBtn: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#B8E5C7",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 6,
+    backgroundColor: "#F3FBF6",
+  },
+  locationMapBtnText: {
+    color: colors.green,
+    fontSize: 13,
+    fontWeight: "800",
   },
 });
 

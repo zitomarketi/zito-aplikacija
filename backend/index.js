@@ -340,6 +340,55 @@ app.get("/me", requireAuth, (req, res) => {
   }).catch((error) => res.status(500).json({ error: String(error) }));
 });
 
+app.post("/me/profile", requireAuth, async (req, res) => {
+  const name = String(req.body?.name || "").trim();
+  const email = String(req.body?.email || "").trim().toLowerCase();
+
+  if (!name) return res.status(400).json({ error: "name is required" });
+  if (!email || !email.includes("@")) return res.status(400).json({ error: "invalid email" });
+
+  try {
+    const user = await db.getUserById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const existing = await db.getUserByEmail(email);
+    if (existing && existing.id !== user.id) {
+      return res.status(409).json({ error: "Email already exists" });
+    }
+
+    const updated = await db.updateUserProfile(user.id, { name, email });
+    return res.json(sanitizeUser(updated));
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+app.post("/me/password", requireAuth, async (req, res) => {
+  const currentPassword = String(req.body?.currentPassword || "");
+  const newPassword = String(req.body?.newPassword || "");
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "currentPassword and newPassword are required" });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: "new password must be at least 6 characters" });
+  }
+
+  try {
+    const user = await db.getUserById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: "Invalid current password" });
+
+    const nextHash = await bcrypt.hash(newPassword, 10);
+    await db.updateUserPassword(user.id, nextHash);
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
 app.get("/loyalty/card", requireAuth, (req, res) => {
   db.getUserById(req.userId).then((user) => {
     if (!user) return res.status(404).json({ error: "User not found" });

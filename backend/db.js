@@ -107,6 +107,14 @@ function createSqliteStore(filePath) {
       );
       return this.getUserById(user.id);
     },
+    async updateUserProfile(id, profile) {
+      await run("UPDATE users SET name = ?, email = ? WHERE id = ?", [profile.name, profile.email, id]);
+      return this.getUserById(id);
+    },
+    async updateUserPassword(id, passwordHash) {
+      await run("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, id]);
+      return this.getUserById(id);
+    },
     async listFlyers() {
       return all("SELECT id, title, price, image FROM flyers ORDER BY id DESC");
     },
@@ -188,6 +196,14 @@ function createPgStore(connectionString) {
         [user.id, user.name, user.email, user.passwordHash, user.points, user.coupons, user.cardNumber],
       );
       return this.getUserById(user.id);
+    },
+    async updateUserProfile(id, profile) {
+      await q("UPDATE users SET name = $1, email = $2 WHERE id = $3", [profile.name, profile.email, id]);
+      return this.getUserById(id);
+    },
+    async updateUserPassword(id, passwordHash) {
+      await q("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, id]);
+      return this.getUserById(id);
     },
     async listFlyers() {
       const r = await q("SELECT id, title, price, image FROM flyers ORDER BY id DESC");
