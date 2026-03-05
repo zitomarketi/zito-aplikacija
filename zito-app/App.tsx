@@ -127,23 +127,30 @@ const fallbackCard: CardData = {
   qrValue: "ZITO:6899512:u1",
 };
 
-type MockFlyer = {
+type CurrentFlyerMock = {
+  id: string;
+  title: string;
+  price: string;
+  image: number;
+};
+
+type BestDealMock = {
   id: string;
   title: string;
   price: string;
   color: string;
 };
 
-const currentFlyersMock: MockFlyer[] = [
-  { id: "c1", title: "Викенд попуст", price: "-20%", color: "#0D8A43" },
-  { id: "c2", title: "Клуб понуда", price: "99 ден.", color: "#107A3E" },
-  { id: "c3", title: "Свежо овошје", price: "49 ден.", color: "#0B6A36" },
-  { id: "c4", title: "Млечни денови", price: "89 ден.", color: "#0D8A43" },
-  { id: "c5", title: "Домашно", price: "129 ден.", color: "#107A3E" },
-  { id: "c6", title: "Семејно", price: "2+1", color: "#0B6A36" },
+const currentFlyersMock: CurrentFlyerMock[] = [
+  { id: "c1", title: "Тест леток 1", price: "", image: require("./assets/images/OIP.webp") },
+  { id: "c2", title: "Тест леток 2", price: "", image: require("./assets/images/OIP (1).webp") },
+  { id: "c3", title: "Тест леток 3", price: "", image: require("./assets/images/OIP (2).webp") },
+  { id: "c4", title: "Тест леток 4", price: "", image: require("./assets/images/OIP (3).webp") },
+  { id: "c5", title: "Тест леток 5", price: "", image: require("./assets/images/OIP (4).webp") },
+  { id: "c6", title: "Тест леток 6", price: "", image: require("./assets/images/tip-4-566x800.png") },
 ];
 
-const bestDealsMock: MockFlyer[] = [
+const bestDealsMock: BestDealMock[] = [
   { id: "b1", title: "Кафе", price: "79 ден.", color: "#0F8A43" },
   { id: "b2", title: "Сок", price: "39 ден.", color: "#0D7B3B" },
   { id: "b3", title: "Чоколадо", price: "59 ден.", color: "#0C6A34" },
@@ -991,7 +998,7 @@ function HomeScreen({ user, card }: { user: User; card: CardData }) {
     () => [...currentFlyersMock, ...currentFlyersMock, ...currentFlyersMock],
     [],
   );
-  const flyersListRef = useRef<FlatList<MockFlyer> | null>(null);
+  const flyersListRef = useRef<FlatList<CurrentFlyerMock> | null>(null);
 
   useEffect(() => {
     const targetIndex = baseFlyersCount;
@@ -1050,11 +1057,9 @@ function HomeScreen({ user, card }: { user: User; card: CardData }) {
             }}
             renderItem={({ item }) => (
               <View
-                style={[styles.currentFlyerCard, { backgroundColor: item.color, width: currentCardWidth, minHeight: currentCardHeight }]}
+                style={[styles.currentFlyerCard, { backgroundColor: palette.card, width: currentCardWidth, minHeight: currentCardHeight }]}
               >
-                <Text style={styles.mockFlyerTag}>{t("tag_zito")}</Text>
-                <Text style={styles.currentFlyerTitle}>{item.title}</Text>
-                <Text style={styles.currentFlyerPrice}>{item.price}</Text>
+                <Image source={item.image} style={styles.currentFlyerImage} resizeMode="cover" />
               </View>
             )}
           />
@@ -2450,8 +2455,12 @@ const styles = StyleSheet.create({
   },
   currentFlyerCard: {
     borderRadius: 10,
-    padding: 10,
-    justifyContent: "space-between",
+    padding: 0,
+    overflow: "hidden",
+  },
+  currentFlyerImage: {
+    width: "100%",
+    height: "100%",
   },
   mockFlyerTag: {
     color: "#D8F7E6",
