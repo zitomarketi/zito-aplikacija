@@ -35,10 +35,12 @@ type TabParamList = {
   Home: undefined;
   Flyers: undefined;
   Card: undefined;
+  PriceCheck: undefined;
   Shopping: undefined;
   Locations: undefined;
   Notifications: undefined;
   Profile: undefined;
+  More: undefined;
 };
 
 type User = {
@@ -69,6 +71,15 @@ type CardData = {
   qrValue: string;
 };
 
+type ProductPrice = {
+  barcode: string;
+  name: string;
+  price: string;
+  currency: string;
+  unit: string;
+  updatedAt: string;
+};
+
 type MarketLocation = {
   name: string;
   city: string;
@@ -88,6 +99,9 @@ type ShoppingItem = {
 
 type ThemeMode = "light" | "dark";
 type LanguageCode = "mk" | "en" | "sq" | "tr";
+const HEADLINE_COLOR = "#1F5D3A";
+const HEADLINE_OUTLINE_COLOR = "#1F5D3A";
+const HEADLINE_OUTLINE_RADIUS = 0;
 type ThemePalette = {
   bg: string;
   card: string;
@@ -177,7 +191,7 @@ const bestDealsMock: BestDealMock[] = Array.from({ length: 16 }, (_, index) => (
 }));
 
 const colors = {
-  bg: "#E9E9E9",
+  bg: "#E0F2DF",
   card: "#FFFFFF",
   green: "#0A8F43",
   dark: "#111111",
@@ -186,7 +200,7 @@ const colors = {
 };
 
 const LIGHT_THEME: ThemePalette = {
-  bg: "#E9E9E9",
+  bg: "#E0F2DF",
   card: "#FFFFFF",
   green: "#0A8F43",
   text: "#111111",
@@ -255,14 +269,18 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tab_home: "Почетна",
     tab_flyers: "Летоци",
     tab_card: "Картичка",
+    tab_prices: "Цени",
     tab_shopping: "Листа",
     tab_locations: "Локации",
     tab_notifications: "Известувања",
     tab_profile: "Профил",
+    tab_more: "Повеќе",
     screen_flyers_title: "Дигитални флаери",
     screen_flyers_subtitle: "Истакнати производи и топ акции",
     screen_card_title: "Дигитална картичка",
     screen_card_subtitle: "Жито Клуб",
+    screen_prices_title: "Проверка на цена",
+    screen_prices_subtitle: "Скенирај баркод за моментална цена",
     screen_shopping_title: "Шопинг листа",
     screen_shopping_subtitle: "Организирај производи пред купување",
     screen_locations_title: "Локации",
@@ -272,6 +290,8 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     screen_notifications_subtitle: "Директна и навремена комуникација",
     screen_profile_title: "Профил",
     screen_profile_subtitle: "Управување со сметка",
+    screen_more_title: "More",
+    screen_more_subtitle: "Брз пристап до останати секции",
     name_label: "Име",
     email_label: "Е-пошта",
     push_status_label: "Push статус",
@@ -288,6 +308,15 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     register_push: "Регистрирај push",
     send_test_push: "Тест push нотификација",
     refresh_data: "Освежи податоци",
+    price_scan_btn: "Скенирај продукт баркод",
+    price_input_placeholder: "Внеси баркод",
+    price_check_btn: "Провери цена",
+    price_result_title: "Моментална цена",
+    price_barcode_label: "Баркод",
+    price_updated_label: "Ажурирано",
+    price_not_found: "Производот не е пронајден.",
+    price_invalid: "Невалиден баркод.",
+    price_lookup_error: "Грешка при проверка на цена.",
     open_shopping_list: "Отвори шопинг листа",
     shopping_item_placeholder: "Производ",
     shopping_qty_placeholder: "Кол.",
@@ -369,14 +398,18 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tab_home: "Home",
     tab_flyers: "Flyers",
     tab_card: "Card",
+    tab_prices: "Prices",
     tab_shopping: "List",
     tab_locations: "Locations",
     tab_notifications: "Alerts",
     tab_profile: "Profile",
+    tab_more: "More",
     screen_flyers_title: "Digital Flyers",
     screen_flyers_subtitle: "Featured products and top deals",
     screen_card_title: "Digital Card",
     screen_card_subtitle: "Zito Club",
+    screen_prices_title: "Price Check",
+    screen_prices_subtitle: "Scan barcode for current in-store price",
     screen_shopping_title: "Shopping List",
     screen_shopping_subtitle: "Organize products before shopping",
     screen_locations_title: "Locations",
@@ -386,6 +419,8 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     screen_notifications_subtitle: "Direct and timely communication",
     screen_profile_title: "Profile",
     screen_profile_subtitle: "Account management",
+    screen_more_title: "More",
+    screen_more_subtitle: "Quick access to other sections",
     name_label: "Name",
     email_label: "Email",
     push_status_label: "Push status",
@@ -402,6 +437,15 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     register_push: "Register push",
     send_test_push: "Send test push",
     refresh_data: "Refresh data",
+    price_scan_btn: "Scan product barcode",
+    price_input_placeholder: "Enter barcode",
+    price_check_btn: "Check price",
+    price_result_title: "Current price",
+    price_barcode_label: "Barcode",
+    price_updated_label: "Updated",
+    price_not_found: "Product not found.",
+    price_invalid: "Invalid barcode.",
+    price_lookup_error: "Price lookup failed.",
     open_shopping_list: "Open shopping list",
     shopping_item_placeholder: "Product",
     shopping_qty_placeholder: "Qty",
@@ -483,14 +527,18 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tab_home: "Kreu",
     tab_flyers: "Fletë",
     tab_card: "Kartela",
+    tab_prices: "Cmimet",
     tab_shopping: "Lista",
     tab_locations: "Lokacione",
     tab_notifications: "Njoftime",
     tab_profile: "Profili",
+    tab_more: "More",
     screen_flyers_title: "Fletë Digjitale",
     screen_flyers_subtitle: "Produkte të theksuara dhe oferta kryesore",
     screen_card_title: "Kartelë Digjitale",
     screen_card_subtitle: "Zito Klub",
+    screen_prices_title: "Kontrollo cmimin",
+    screen_prices_subtitle: "Skano barkodin per cmimin aktual",
     screen_shopping_title: "Lista e blerjes",
     screen_shopping_subtitle: "Organizo produktet para blerjes",
     screen_locations_title: "Lokacione",
@@ -500,6 +548,8 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     screen_notifications_subtitle: "Komunikim i drejtpërdrejtë dhe në kohë",
     screen_profile_title: "Profili",
     screen_profile_subtitle: "Menaxhim i llogarisë",
+    screen_more_title: "More",
+    screen_more_subtitle: "Qasje e shpejte te seksionet e tjera",
     name_label: "Emri",
     email_label: "Email",
     push_status_label: "Statusi i push",
@@ -516,6 +566,15 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     register_push: "Regjistro push",
     send_test_push: "Dergo push test",
     refresh_data: "Rifresko të dhënat",
+    price_scan_btn: "Skano barkodin e produktit",
+    price_input_placeholder: "Shkruaj barkodin",
+    price_check_btn: "Kontrollo cmimin",
+    price_result_title: "Cmimi aktual",
+    price_barcode_label: "Barkodi",
+    price_updated_label: "Perditesuar",
+    price_not_found: "Produkti nuk u gjet.",
+    price_invalid: "Barkod i pavlefshem.",
+    price_lookup_error: "Gabim ne kontrollin e cmimit.",
     open_shopping_list: "Hap listen e blerjes",
     shopping_item_placeholder: "Produkti",
     shopping_qty_placeholder: "Sasia",
@@ -597,14 +656,18 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tab_home: "Ana Sayfa",
     tab_flyers: "Brosurler",
     tab_card: "Kart",
+    tab_prices: "Fiyat",
     tab_shopping: "Liste",
     tab_locations: "Konumlar",
     tab_notifications: "Bildirimler",
     tab_profile: "Profil",
+    tab_more: "More",
     screen_flyers_title: "Dijital Brosurler",
     screen_flyers_subtitle: "One cikan urunler ve en iyi aksiyonlar",
     screen_card_title: "Dijital Kart",
     screen_card_subtitle: "Zito Kulup",
+    screen_prices_title: "Fiyat kontrolu",
+    screen_prices_subtitle: "Guncel fiyat icin barkod tara",
     screen_shopping_title: "Alisveris listesi",
     screen_shopping_subtitle: "Alisveris oncesi urunleri duzenle",
     screen_locations_title: "Konumlar",
@@ -614,6 +677,8 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     screen_notifications_subtitle: "Dogrudan ve zamaninda iletisim",
     screen_profile_title: "Profil",
     screen_profile_subtitle: "Hesap yonetimi",
+    screen_more_title: "More",
+    screen_more_subtitle: "Diger bolumlere hizli erisim",
     name_label: "Ad",
     email_label: "E-posta",
     push_status_label: "Push durumu",
@@ -630,6 +695,15 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     register_push: "Push kaydet",
     send_test_push: "Test push gonder",
     refresh_data: "Veriyi yenile",
+    price_scan_btn: "Urun barkodu tara",
+    price_input_placeholder: "Barkod gir",
+    price_check_btn: "Fiyati kontrol et",
+    price_result_title: "Guncel fiyat",
+    price_barcode_label: "Barkod",
+    price_updated_label: "Guncellendi",
+    price_not_found: "Urun bulunamadi.",
+    price_invalid: "Gecersiz barkod.",
+    price_lookup_error: "Fiyat kontrolu basarisiz.",
     open_shopping_list: "Alisveris listesini ac",
     shopping_item_placeholder: "Urun",
     shopping_qty_placeholder: "Adet",
@@ -1172,13 +1246,12 @@ function HomeScreen({ user, card, onOpenShoppingList }: { user: User; card: Card
 }
 
 function OutlinedHeader({ text }: { text: string }) {
-  const { palette } = useAppTheme();
   return (
-    <View style={[styles.outlinedTitleWrap, { borderBottomColor: palette.green }]}>
+    <View style={[styles.outlinedTitleWrap, { borderBottomColor: colors.green }]}>
       <Text
         style={[
           styles.showcaseHeaderMain,
-          { color: palette.green, textShadowColor: modeShadowColor(palette.green) },
+          { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS },
         ]}
       >
         {text}
@@ -1197,7 +1270,7 @@ function FlyersScreen({ flyers, onOpenShoppingList }: { flyers: Flyer[]; onOpenS
     <ScreenWrap
       title={t("screen_flyers_title")}
       subtitle={t("screen_flyers_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <Pressable style={[styles.quickListBtn, { backgroundColor: palette.card, borderColor: palette.border }]} onPress={onOpenShoppingList}>
@@ -1288,7 +1361,7 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
     <ScreenWrap
       title={t("screen_card_title")}
       subtitle={t("screen_card_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <Pressable style={[styles.scanBtn, { backgroundColor: palette.card, borderColor: palette.green }]} onPress={() => void handleOpenScanner()}>
@@ -1304,6 +1377,131 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
           <Text style={[styles.barcodeDigits, { color: palette.text }]}>{card.barcode}</Text>
         </View>
       </View>
+    </ScreenWrap>
+  );
+}
+
+function PriceCheckScreen({
+  onCheckPrice,
+}: {
+  onCheckPrice: (barcode: string) => Promise<{ product: ProductPrice | null; error: string | null }>;
+}) {
+  const { palette } = useAppTheme();
+  const { t } = useI18n();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scanLocked, setScanLocked] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [status, setStatus] = useState("");
+  const [product, setProduct] = useState<ProductPrice | null>(null);
+
+  const lookup = async (rawBarcode: string) => {
+    const barcode = rawBarcode.replace(/\D/g, "");
+    if (barcode.length < 6) {
+      setStatus(t("price_invalid"));
+      setProduct(null);
+      return;
+    }
+    const result = await onCheckPrice(barcode);
+    if (result.error) {
+      setStatus(result.error);
+      setProduct(null);
+      return;
+    }
+    if (!result.product) {
+      setStatus(t("price_not_found"));
+      setProduct(null);
+      return;
+    }
+    setStatus("");
+    setProduct(result.product);
+  };
+
+  const handleOpenScanner = async () => {
+    setScanLocked(false);
+    if (!cameraPermission?.granted) {
+      const permission = await requestCameraPermission();
+      if (!permission.granted) {
+        setStatus(t("camera_permission_error"));
+        return;
+      }
+    }
+    setIsScannerOpen(true);
+  };
+
+  const handleBarcodeScanned = async ({ data }: BarcodeScanningResult) => {
+    if (scanLocked) return;
+    setScanLocked(true);
+    const barcode = String(data || "").replace(/\D/g, "");
+    setIsScannerOpen(false);
+    setBarcodeInput(barcode);
+    await lookup(barcode);
+    setScanLocked(false);
+  };
+
+  if (isScannerOpen) {
+    return (
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}>
+        <View style={styles.scannerWrap}>
+          <CameraView
+            style={styles.scannerCamera}
+            facing="back"
+            barcodeScannerSettings={{
+              barcodeTypes: ["ean13", "ean8", "code128", "code39", "upc_a", "upc_e", "itf14"],
+            }}
+            onBarcodeScanned={scanLocked ? undefined : handleBarcodeScanned}
+          />
+          <View style={styles.scannerOverlay}>
+            <Text style={styles.scannerTitle}>{t("screen_prices_title")}</Text>
+            <Text style={styles.scannerHint}>{t("scan_barcode_hint")}</Text>
+            <Pressable style={styles.scannerCloseBtn} onPress={() => setIsScannerOpen(false)}>
+              <Text style={styles.scannerCloseBtnText}>{t("cancel")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <ScreenWrap
+      title={t("screen_prices_title")}
+      subtitle={t("screen_prices_subtitle")}
+      titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      subtitleStyle={styles.flyersScreenSubtitle}
+    >
+      <Pressable style={[styles.scanBtn, { backgroundColor: palette.card, borderColor: palette.green }]} onPress={() => void handleOpenScanner()}>
+        <Ionicons name="scan-outline" size={18} color={colors.green} />
+        <Text style={styles.scanBtnText}>{t("price_scan_btn")}</Text>
+      </Pressable>
+
+      <TextInput
+        value={barcodeInput}
+        onChangeText={(text) => setBarcodeInput(text.replace(/\D/g, ""))}
+        placeholder={t("price_input_placeholder")}
+        placeholderTextColor="#9A9A9A"
+        style={[styles.input, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
+        keyboardType="number-pad"
+      />
+      <Pressable style={[styles.loginBtn, { marginTop: 0 }]} onPress={() => void lookup(barcodeInput)}>
+        <Ionicons name="pricetag-outline" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("price_check_btn")}</Text>
+      </Pressable>
+      {status ? <Text style={[styles.scanStatusText, { color: palette.muted }]}>{status}</Text> : null}
+
+      {product ? (
+        <View style={[styles.priceResultCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <Text style={[styles.priceResultTitle, { color: palette.text }]}>{t("price_result_title")}</Text>
+          <Text style={[styles.priceResultName, { color: palette.text }]}>{product.name}</Text>
+          <Text style={styles.priceResultValue}>{`${product.price} ден.`}{product.unit ? ` / ${product.unit}` : ""}</Text>
+          <Text style={[styles.priceResultMeta, { color: palette.muted }]}>
+            {t("price_barcode_label")}: {product.barcode}
+          </Text>
+          <Text style={[styles.priceResultMeta, { color: palette.muted }]}>
+            {t("price_updated_label")}: {product.updatedAt}
+          </Text>
+        </View>
+      ) : null}
     </ScreenWrap>
   );
 }
@@ -1345,7 +1543,7 @@ function ShoppingListScreen({
     <ScreenWrap
       title={t("screen_shopping_title")}
       subtitle={t("screen_shopping_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <View style={[styles.shoppingForm, { backgroundColor: palette.card, borderColor: palette.border }]}>
@@ -1433,7 +1631,7 @@ function NotificationsScreen({ notices }: { notices: Notice[] }) {
     <ScreenWrap
       title={t("screen_notifications_title")}
       subtitle={t("screen_notifications_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       {notices.map((notice) => (
@@ -1485,7 +1683,7 @@ function LocationsScreen() {
     <ScreenWrap
       title={t("screen_locations_title")}
       subtitle={t("screen_locations_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locationCityChipsRow}>
@@ -1499,7 +1697,7 @@ function LocationsScreen() {
                 styles.locationCityChip,
                 {
                   backgroundColor: active ? colors.green : palette.card,
-                  borderColor: active ? colors.green : palette.border,
+                  borderColor: "#ADF5A6",
                 },
               ]}
             >
@@ -1509,7 +1707,7 @@ function LocationsScreen() {
                   { color: active ? "#FFFFFF" : palette.text },
                 ]}
               >
-                {city === "all" ? `📁 ${t("locations_all")}` : `📁 ${city}`}
+                {city === "all" ? t("locations_all") : city}
               </Text>
             </Pressable>
           );
@@ -1589,7 +1787,7 @@ function ProfileScreen({
     <ScreenWrap
       title={t("screen_profile_title")}
       subtitle={t("screen_profile_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: palette.green, textShadowColor: modeShadowColor(palette.green) }]}
+      titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <InfoCard title={t("name_label")} value={user.name} />
@@ -1696,6 +1894,41 @@ function ProfileScreen({
   );
 }
 
+function MoreScreen({
+  onOpenCard,
+  onOpenLocations,
+  onOpenProfile,
+}: {
+  onOpenCard: () => void;
+  onOpenLocations: () => void;
+  onOpenProfile: () => void;
+}) {
+  const { t } = useI18n();
+  const { palette } = useAppTheme();
+
+  return (
+    <ScreenWrap
+      title=""
+      subtitle={t("screen_more_subtitle")}
+      titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      subtitleStyle={styles.flyersScreenSubtitle}
+    >
+      <Pressable style={[styles.loginBtn, { marginTop: 0 }]} onPress={onOpenCard}>
+        <Ionicons name="card-outline" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("tab_card")}</Text>
+      </Pressable>
+      <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onOpenLocations}>
+        <Ionicons name="location-outline" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("tab_locations")}</Text>
+      </Pressable>
+      <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onOpenProfile}>
+        <Ionicons name="person-outline" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("tab_profile")}</Text>
+      </Pressable>
+    </ScreenWrap>
+  );
+}
+
 function InfoCard({ title, value }: { title: string; value: string }) {
   const { palette } = useAppTheme();
   return (
@@ -1729,7 +1962,7 @@ function ScreenWrap({
           { paddingBottom: tabBarHeight + 20 },
         ]}
       >
-        <Text style={[styles.screenTitle, { color: palette.text }, titleStyle]}>{title}</Text>
+        {title.trim().length > 0 ? <Text style={[styles.screenTitle, { color: palette.text }, titleStyle]}>{title}</Text> : null}
         <Text style={[styles.screenSubtitle, { color: palette.muted }, subtitleStyle]}>{subtitle}</Text>
         {children}
       </ScrollView>
@@ -1753,6 +1986,7 @@ function MainTabs({
   onClearPurchasedShoppingItems,
   onSetLanguage,
   onScanCard,
+  onCheckPrice,
   onUpdateProfile,
   onChangePassword,
   onRegisterPush,
@@ -1775,6 +2009,7 @@ function MainTabs({
   onClearPurchasedShoppingItems: () => void;
   onSetLanguage: (language: LanguageCode) => void;
   onScanCard: (cardNumber: string) => Promise<string>;
+  onCheckPrice: (barcode: string) => Promise<{ product: ProductPrice | null; error: string | null }>;
   onUpdateProfile: (name: string, email: string) => void;
   onChangePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => void;
   onRegisterPush: () => void;
@@ -1785,8 +2020,33 @@ function MainTabs({
   const { palette } = useAppTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const [hasUnreadNotices, setHasUnreadNotices] = useState(false);
+  const [blinkOn, setBlinkOn] = useState(true);
+  const seenNoticeCountRef = useRef(notices.length);
   const tabBottomPadding = Math.max(insets.bottom, Platform.OS === "android" ? 10 : 8);
-  const tabHeight = 56 + tabBottomPadding;
+  const tabHeight = 58 + tabBottomPadding;
+
+  useEffect(() => {
+    if (notices.length > seenNoticeCountRef.current) {
+      setHasUnreadNotices(true);
+    }
+  }, [notices]);
+
+  useEffect(() => {
+    if (!hasUnreadNotices) {
+      setBlinkOn(true);
+      return;
+    }
+    const timer = setInterval(() => {
+      setBlinkOn((prev) => !prev);
+    }, 650);
+    return () => clearInterval(timer);
+  }, [hasUnreadNotices]);
+
+  const markNotificationsRead = () => {
+    seenNoticeCountRef.current = notices.length;
+    setHasUnreadNotices(false);
+  };
 
   return (
     <Tab.Navigator
@@ -1794,30 +2054,52 @@ function MainTabs({
         headerShown: false,
         tabBarActiveTintColor: palette.green,
         tabBarInactiveTintColor: palette.muted,
+        tabBarShowLabel: true,
         tabBarStyle: {
           borderTopColor: palette.border,
           backgroundColor: palette.card,
           height: tabHeight,
           paddingBottom: tabBottomPadding,
           paddingTop: 6,
+          paddingHorizontal: 0,
+        },
+        tabBarItemStyle: {
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          lineHeight: 14,
-          marginBottom: 1,
+          fontSize: 10,
+          lineHeight: 12,
+          marginTop: -2,
+          marginBottom: 2,
           includeFontPadding: false,
+          textAlign: "center",
         },
-        tabBarIcon: ({ color, size }) => {
+        tabBarIconStyle: {
+          marginTop: 2,
+        },
+        tabBarIcon: ({ color }) => {
           const map: Record<keyof TabParamList, keyof typeof Ionicons.glyphMap> = {
             Home: "home",
             Flyers: "pricetags",
             Card: "card",
+            PriceCheck: "barcode-outline",
             Shopping: "basket",
             Locations: "location",
             Notifications: "notifications",
             Profile: "person",
+            More: "ellipsis-horizontal-circle",
           };
-          return <Ionicons name={map[route.name as keyof TabParamList]} size={size} color={color} />;
+          if (route.name === "Notifications" && hasUnreadNotices) {
+            return (
+              <View style={{ opacity: blinkOn ? 1 : 0.22 }}>
+                <Ionicons name={map[route.name as keyof TabParamList]} size={21} color={blinkOn ? palette.green : color} />
+              </View>
+            );
+          }
+          return <Ionicons name={map[route.name as keyof TabParamList]} size={21} color={color} />;
         },
       })}
     >
@@ -1827,8 +2109,11 @@ function MainTabs({
       <Tab.Screen name="Flyers" options={{ title: t("tab_flyers") }}>
         {({ navigation }) => <FlyersScreen flyers={flyers} onOpenShoppingList={() => navigation.navigate("Shopping")} />}
       </Tab.Screen>
-      <Tab.Screen name="Card" options={{ title: t("tab_card") }}>
-        {() => <CardScreen card={card} onScanCard={onScanCard} />}
+      <Tab.Screen name="PriceCheck" options={{ title: t("tab_prices") }}>
+        {() => <PriceCheckScreen onCheckPrice={onCheckPrice} />}
+      </Tab.Screen>
+      <Tab.Screen name="Notifications" options={{ title: t("tab_notifications") }} listeners={{ focus: markNotificationsRead }}>
+        {() => <NotificationsScreen notices={notices} />}
       </Tab.Screen>
       <Tab.Screen name="Shopping" options={{ title: t("tab_shopping") }}>
         {() => (
@@ -1841,13 +2126,43 @@ function MainTabs({
           />
         )}
       </Tab.Screen>
-      <Tab.Screen name="Locations" options={{ title: t("tab_locations") }}>
+      <Tab.Screen name="More" options={{ title: t("tab_more") }}>
+        {({ navigation }) => (
+          <MoreScreen
+            onOpenCard={() => navigation.navigate("Card")}
+            onOpenLocations={() => navigation.navigate("Locations")}
+            onOpenProfile={() => navigation.navigate("Profile")}
+          />
+        )}
+      </Tab.Screen>
+      <Tab.Screen
+        name="Card"
+        options={{
+          title: t("tab_card"),
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: "none" },
+        }}
+      >
+        {() => <CardScreen card={card} onScanCard={onScanCard} />}
+      </Tab.Screen>
+      <Tab.Screen
+        name="Locations"
+        options={{
+          title: t("tab_locations"),
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: "none" },
+        }}
+      >
         {() => <LocationsScreen />}
       </Tab.Screen>
-      <Tab.Screen name="Notifications" options={{ title: t("tab_notifications") }}>
-        {() => <NotificationsScreen notices={notices} />}
-      </Tab.Screen>
-      <Tab.Screen name="Profile" options={{ title: t("tab_profile") }}>
+      <Tab.Screen
+        name="Profile"
+        options={{
+          title: t("tab_profile"),
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: "none" },
+        }}
+      >
         {({ navigation }) => (
           <ProfileScreen
             user={user}
@@ -1928,6 +2243,7 @@ export default function App() {
   const [pushState, setPushState] = useState(t("state_unregistered"));
   const [profileState, setProfileState] = useState("-");
   const autoPushAttemptedRef = useRef(false);
+  const dummyNoticeSentRef = useRef(false);
 
   useEffect(() => {
     const loadShoppingItems = async () => {
@@ -2085,6 +2401,23 @@ export default function App() {
   }, [loggedIn, authToken, language]);
 
   useEffect(() => {
+    if (!loggedIn || dummyNoticeSentRef.current) return;
+    dummyNoticeSentRef.current = true;
+    const timer = setTimeout(() => {
+      setNotices((prev) => [
+        {
+          id: `dummy-${Date.now()}`,
+          title: "Zito aplikacija",
+          body: "Dummy izvestuvanje za test na trepkanje.",
+          createdAt: "sега",
+        },
+        ...prev,
+      ]);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [loggedIn]);
+
+  useEffect(() => {
     const sub = Linking.addEventListener("url", (event) => {
       void consumeOAuthCallback(event.url);
     });
@@ -2236,6 +2569,19 @@ export default function App() {
       setPushState(t("state_refreshed"));
     } catch {
       setPushState(t("state_refresh_error"));
+    }
+  };
+
+  const handleCheckPrice = async (barcode: string): Promise<{ product: ProductPrice | null; error: string | null }> => {
+    if (!authToken) return { product: null, error: t("price_lookup_error") };
+    try {
+      const product = await apiPost<ProductPrice>(apiBase, "/price/check", { barcode }, authToken);
+      return { product, error: null };
+    } catch (error) {
+      const apiError = extractApiErrorMessage(error).toLowerCase();
+      if (apiError.includes("not found")) return { product: null, error: t("price_not_found") };
+      if (apiError.includes("invalid barcode")) return { product: null, error: t("price_invalid") };
+      return { product: null, error: t("price_lookup_error") };
     }
   };
 
@@ -2418,6 +2764,7 @@ export default function App() {
                 onClearPurchasedShoppingItems={handleClearPurchasedShoppingItems}
                 onSetLanguage={setLanguage}
                 onScanCard={handleScanCard}
+                onCheckPrice={handleCheckPrice}
                 onUpdateProfile={handleUpdateProfile}
                 onChangePassword={handleChangePassword}
                 onRegisterPush={handlePushRegister}
@@ -2929,6 +3276,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: "center",
   },
+  priceResultCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    gap: 6,
+  },
+  priceResultTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  priceResultName: {
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  priceResultValue: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: colors.green,
+    marginTop: 2,
+  },
+  priceResultMeta: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
   shoppingForm: {
     borderRadius: 12,
     borderWidth: 1,
@@ -3074,18 +3445,20 @@ const styles = StyleSheet.create({
   locationCityChipsRow: {
     paddingBottom: 10,
     gap: 8,
+    paddingHorizontal: 2,
   },
   locationCityChip: {
     borderWidth: 1,
-    borderRadius: 10,
-    minHeight: 36,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 6,
+    minHeight: 34,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     justifyContent: "center",
   },
   locationCityChipText: {
-    fontSize: 13,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   locationCityTitle: {
     fontSize: 18,

@@ -129,3 +129,11 @@
   - pressed feedback: opacity state on tap
 - Improved readability/contrast and shape consistency for light and dark themes.
 - Built and installed updated APK on physical device for validation.
+
+## March 6, 2026 - Notifications tab blink indicator + More header cleanup
+- Removed the large `More` page title from the `Повеќе` screen header area while keeping the bottom tab item intact.
+- Added unread visual indicator for `Известувања` tab icon:
+  - icon now blinks when new notifications arrive
+  - blinking stops when user opens the `Известувања` tab (marks as read in UI state)
+- Added temporary dummy in-app notification trigger on login to quickly validate blinking behavior during testing.
+- Validated TypeScript (`npx tsc --noEmit`), built release APK, and installed on physical device.
