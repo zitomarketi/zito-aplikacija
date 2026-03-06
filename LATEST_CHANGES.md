@@ -120,3 +120,12 @@
 - Confirmed key entries now carry coordinates in app data (including `Битола`, `Битола 2`, `Битола 3`, `Валандово`).
 - Forced fresh JS rebundle in release build to ensure updated JSON is packaged.
 - Installed updated APK on physical device; user confirmed locations now display correctly.
+
+## March 6, 2026 - Login language switcher modernization
+- Replaced emoji-flag language buttons on the login screen with a cleaner segmented switcher (`MK | EN | SQ | TR`).
+- Updated visual states for better production look:
+  - active language: filled green
+  - inactive language: subtle outlined surface
+  - pressed feedback: opacity state on tap
+- Improved readability/contrast and shape consistency for light and dark themes.
+- Built and installed updated APK on physical device for validation.

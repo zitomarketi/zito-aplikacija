@@ -678,11 +678,11 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
   },
 };
 
-const LOGIN_LANGUAGE_OPTIONS: Array<{ code: LanguageCode; flag: string }> = [
-  { code: "mk", flag: "🇲🇰" },
-  { code: "en", flag: "🇬🇧" },
-  { code: "sq", flag: "🇦🇱" },
-  { code: "tr", flag: "🇹🇷" },
+const LOGIN_LANGUAGE_OPTIONS: Array<{ code: LanguageCode; label: string }> = [
+  { code: "mk", label: "MK" },
+  { code: "en", label: "EN" },
+  { code: "sq", label: "SQ" },
+  { code: "tr", label: "TR" },
 ];
 
 const I18nContext = createContext<{
@@ -990,14 +990,27 @@ function LoginScreen({
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
       <View style={[styles.loginLangDock, { bottom: Math.max(insets.bottom, 8) }]}>
-        <View style={styles.loginLangRow}>
+        <View style={[styles.loginLangRow, { backgroundColor: palette.card, borderColor: palette.border }]}>
           {LOGIN_LANGUAGE_OPTIONS.map((option) => (
             <Pressable
               key={option.code}
-              style={[styles.loginLangChip, language === option.code && styles.loginLangChipActive]}
+              style={({ pressed }) => [
+                styles.loginLangChip,
+                language === option.code
+                  ? styles.loginLangChipActive
+                  : { backgroundColor: palette.inputBg, borderColor: palette.border },
+                pressed && styles.loginLangChipPressed,
+              ]}
               onPress={() => onSetLanguage(option.code)}
             >
-              <Text style={styles.loginLangFlag}>{option.flag}</Text>
+              <Text
+                style={[
+                  styles.loginLangText,
+                  { color: language === option.code ? "#FFFFFF" : palette.muted },
+                ]}
+              >
+                {option.label}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -1543,8 +1556,6 @@ function ProfileScreen({
   onSetLanguage,
   onUpdateProfile,
   onChangePassword,
-  onRegisterPush,
-  onSendTestPush,
   onRefresh,
   onOpenShoppingList,
   onLogout,
@@ -1557,8 +1568,6 @@ function ProfileScreen({
   onSetLanguage: (language: LanguageCode) => void;
   onUpdateProfile: (name: string, email: string) => void;
   onChangePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => void;
-  onRegisterPush: () => void;
-  onSendTestPush: () => void;
   onRefresh: () => void;
   onOpenShoppingList: () => void;
   onLogout: () => void;
@@ -1674,14 +1683,6 @@ function ProfileScreen({
       <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onOpenShoppingList}>
         <Ionicons name="basket-outline" size={20} color={colors.green} />
         <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("open_shopping_list")}</Text>
-      </Pressable>
-      <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onRegisterPush}>
-        <Ionicons name="notifications-outline" size={20} color={colors.green} />
-        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("register_push")}</Text>
-      </Pressable>
-      <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onSendTestPush}>
-        <Ionicons name="send-outline" size={20} color={colors.green} />
-        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("send_test_push")}</Text>
       </Pressable>
       <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onRefresh}>
         <MaterialIcons name="refresh" size={20} color={colors.green} />
@@ -1857,8 +1858,6 @@ function MainTabs({
             onSetLanguage={onSetLanguage}
             onUpdateProfile={onUpdateProfile}
             onChangePassword={onChangePassword}
-            onRegisterPush={onRegisterPush}
-            onSendTestPush={onSendTestPush}
             onRefresh={onRefresh}
             onOpenShoppingList={() => navigation.navigate("Shopping")}
             onLogout={onLogout}
@@ -2632,6 +2631,9 @@ const styles = StyleSheet.create({
   loginLangRow: {
     flexDirection: "row",
     justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 4,
     gap: 8,
   },
   loginLangDock: {
@@ -2641,22 +2643,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loginLangChip: {
-    minWidth: 56,
-    minHeight: 34,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    minWidth: 58,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 9,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
+  loginLangChipPressed: {
+    opacity: 0.86,
+  },
   loginLangChipActive: {
     borderColor: colors.green,
-    backgroundColor: "#E8F7EE",
+    backgroundColor: colors.green,
   },
-  loginLangFlag: {
-    fontSize: 18,
+  loginLangText: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.4,
   },
   banner: {
     backgroundColor: colors.card,
