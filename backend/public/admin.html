@@ -454,7 +454,10 @@
 
       async function buildPdfThumbnailBase64(file) {
         try {
-          if (!window.pdfjsLib || String(file?.type || "").toLowerCase() !== "application/pdf") return "";
+          const mimeType = String(file?.type || "").toLowerCase();
+          const name = String(file?.name || "").toLowerCase();
+          const isPdf = mimeType.includes("pdf") || name.endsWith(".pdf");
+          if (!window.pdfjsLib || !isPdf) return "";
           const fileBytes = await file.arrayBuffer();
           const pdf = await window.pdfjsLib.getDocument({ data: fileBytes }).promise;
           const page = await pdf.getPage(1);
