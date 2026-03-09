@@ -325,3 +325,15 @@
   - `react-native-webview` (installed via Expo-compatible install).
 - Validation:
   - `npx tsc --noEmit` passed.
+
+## March 9, 2026 - [Mobile/Home] PDF thumbnail rendering stabilized (native)
+- Replaced WebView-based PDF rendering with native `react-native-pdf` renderer for better Android reliability.
+- Home PDF cards now render first page directly from the PDF file (thumbnail preview) instead of blank WebView surfaces.
+- Fullscreen in-app PDF popup now uses native PDF renderer as well.
+- Added native dependencies in app:
+  - `react-native-pdf`
+  - `react-native-blob-util`
+- Delivery validation:
+  - TypeScript check passed.
+  - Android release APK built successfully.
+  - APK installed on connected device via ADB.

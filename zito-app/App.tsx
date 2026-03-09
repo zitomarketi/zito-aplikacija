@@ -27,7 +27,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
+import Pdf from "react-native-pdf";
 
 type RootStackParamList = {
   Login: undefined;
@@ -1301,22 +1301,20 @@ function HomeScreen({
             renderItem={({ item }) => {
               const targetUrl = normalizeExternalFlyerUrl(item.imageUrl);
               const isPdf = Boolean(item.isPdf || (targetUrl && /\.pdf($|\?)/i.test(targetUrl)));
-              const pdfViewerUrl = isPdf ? buildEmbeddedPdfViewerUrl(targetUrl || "") : "";
               const imageSource = item.image ? item.image : targetUrl ? { uri: targetUrl } : null;
               return (
                 <Pressable
                   style={[styles.currentFlyerCard, { backgroundColor: palette.card, width: currentCardWidth, minHeight: currentCardHeight }]}
                   onPress={targetUrl ? () => void openCurrentFlyer(item) : undefined}
                 >
-                  {isPdf && pdfViewerUrl ? (
+                  {isPdf && targetUrl ? (
                     <View style={styles.currentFlyerPdfCard}>
-                      <WebView
-                        pointerEvents="none"
-                        source={{ uri: pdfViewerUrl }}
+                      <Pdf
+                        source={{ uri: targetUrl, cache: true }}
                         style={styles.currentFlyerPdfWebView}
-                        scrollEnabled={false}
-                        javaScriptEnabled
-                        domStorageEnabled
+                        page={1}
+                        singlePage
+                        trustAllCerts={false}
                       />
                       <View style={styles.currentFlyerPdfBadge}>
                         <MaterialIcons name="picture-as-pdf" size={14} color="#FFFFFF" />
@@ -1376,12 +1374,10 @@ function HomeScreen({
             </Pressable>
           </View>
           {activePdfUrl ? (
-            <WebView
-              source={{ uri: buildEmbeddedPdfViewerUrl(activePdfUrl) }}
+            <Pdf
+              source={{ uri: activePdfUrl, cache: true }}
               style={styles.pdfModalWebView}
-              javaScriptEnabled
-              domStorageEnabled
-              startInLoadingState
+              trustAllCerts={false}
             />
           ) : null}
         </SafeAreaView>
@@ -1415,12 +1411,6 @@ function normalizeExternalFlyerUrl(value: string | undefined) {
   if (/^https?:\/\//i.test(raw)) return raw;
   if (/^www\./i.test(raw)) return `https://${raw}`;
   return "";
-}
-
-function buildEmbeddedPdfViewerUrl(pdfUrl: string) {
-  const normalized = normalizeExternalFlyerUrl(pdfUrl);
-  if (!normalized) return "";
-  return `https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(normalized)}`;
 }
 
 function FlyersScreen({ flyers, onOpenShoppingList }: { flyers: Flyer[]; onOpenShoppingList: () => void }) {
