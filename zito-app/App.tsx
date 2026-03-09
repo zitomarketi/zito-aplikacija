@@ -1228,6 +1228,8 @@ function HomeScreen({
   );
   const flyersListRef = useRef<FlatList<CurrentFlyerMock> | null>(null);
   const [activePdfUrl, setActivePdfUrl] = useState("");
+  const [pdfLoadProgress, setPdfLoadProgress] = useState(0);
+  const [pdfLoadError, setPdfLoadError] = useState("");
   const [cachedPdfUrls, setCachedPdfUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -1274,6 +1276,8 @@ function HomeScreen({
     if (!targetUrl) return;
     const isPdf = Boolean(item.isPdf || /\.pdf($|\?)/i.test(targetUrl));
     if (isPdf) {
+      setPdfLoadProgress(0);
+      setPdfLoadError("");
       setActivePdfUrl(cachedPdfUrls[targetUrl] || targetUrl);
       return;
     }
@@ -1419,14 +1423,40 @@ function HomeScreen({
         <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}>
           <View style={[styles.pdfModalHeader, { backgroundColor: palette.card, borderColor: palette.border }]}>
             <Text style={[styles.pdfModalTitle, { color: palette.text }]}>Леток PDF</Text>
-            <Pressable style={styles.pdfModalCloseBtn} onPress={() => setActivePdfUrl("")}>
+            <Pressable
+              style={styles.pdfModalCloseBtn}
+              onPress={() => {
+                setActivePdfUrl("");
+                setPdfLoadProgress(0);
+                setPdfLoadError("");
+              }}
+            >
               <Ionicons name="close" size={20} color="#FFFFFF" />
             </Pressable>
+          </View>
+          <View style={[styles.pdfProgressWrap, { backgroundColor: palette.card, borderColor: palette.border }]}>
+            <View style={styles.pdfProgressTrack}>
+              <View style={[styles.pdfProgressFill, { width: `${Math.max(0, Math.min(100, pdfLoadProgress))}%` }]} />
+            </View>
+            <Text style={[styles.pdfProgressText, { color: palette.muted }]}>
+              {pdfLoadError ? `Грешка: ${pdfLoadError}` : `Вчитување PDF: ${Math.round(pdfLoadProgress)}%`}
+            </Text>
           </View>
           {activePdfUrl ? (
             <Pdf
               source={{ uri: activePdfUrl, cache: true }}
               style={styles.pdfModalWebView}
+              onLoadProgress={(percent: number) => {
+                const next = Number.isFinite(percent) ? percent * 100 : 0;
+                setPdfLoadProgress(Math.max(0, Math.min(100, next)));
+              }}
+              onLoadComplete={() => {
+                setPdfLoadProgress(100);
+                setPdfLoadError("");
+              }}
+              onError={(error) => {
+                setPdfLoadError(String(error?.message || "PDF не може да се отвори"));
+              }}
               trustAllCerts={false}
             />
           ) : null}
@@ -3581,6 +3611,27 @@ const styles = StyleSheet.create({
   pdfModalWebView: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+  },
+  pdfProgressWrap: {
+    borderBottomWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  pdfProgressTrack: {
+    width: "100%",
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#D8D8D8",
+    overflow: "hidden",
+  },
+  pdfProgressFill: {
+    height: "100%",
+    backgroundColor: "#0A8F43",
+  },
+  pdfProgressText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   mockFlyerTag: {
     color: "#D8F7E6",
