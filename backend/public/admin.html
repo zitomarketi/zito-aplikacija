@@ -171,11 +171,13 @@
       <h4>Тековни летоци</h4>
       <div class="gallery-actions">
         <button type="button" onclick="openNewUpload('letoci')">Upload new (летоци)</button>
+        <button type="button" onclick="openNewUrlImport('letoci')">Import URL (летоци)</button>
       </div>
       <div id="apkCurrentFlyers" class="gallery-grid"></div>
       <h4 style="margin-top: 16px">Најдобри акции</h4>
       <div class="gallery-actions">
         <button type="button" onclick="openNewUpload('akcii')">Upload new (акции)</button>
+        <button type="button" onclick="openNewUrlImport('akcii')">Import URL (акции)</button>
       </div>
       <div id="apkBestDeals" class="gallery-grid"></div>
     </div>
@@ -369,6 +371,7 @@
               <div class="gallery-label">${escapeHtml(item.label)}</div>
               <div class="gallery-file">${escapeHtml(item.file)}</div>
               <button type="button" style="margin-top:6px" onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">Replace</button>
+              <button type="button" style="margin-top:6px" onclick="openReplaceFromUrl('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">Replace URL</button>
             </div>`,
               )
               .join("")
@@ -394,6 +397,30 @@
         if (!fileName) return;
         pendingUploadTarget = { mode: "new", group, file: fileName.trim() };
         galleryFileInput.click();
+      }
+
+      async function importImageFromUrl(group, targetFile, imageUrl) {
+        const ok = await callUpload("/admin/apk-gallery/import-url", {
+          group,
+          targetFile,
+          fileName: targetFile,
+          imageUrl,
+        });
+        if (ok) await loadApkGallery();
+      }
+
+      async function openNewUrlImport(group) {
+        const imageUrl = prompt("Paste direct image URL (png/jpg/webp):", "");
+        if (!imageUrl) return;
+        const fileName = prompt("Enter file name (without extension):", "new-image");
+        if (!fileName) return;
+        await importImageFromUrl(group, fileName.trim(), imageUrl.trim());
+      }
+
+      async function openReplaceFromUrl(group, file) {
+        const imageUrl = prompt("Paste new direct image URL for replace:", "");
+        if (!imageUrl) return;
+        await importImageFromUrl(group, file, imageUrl.trim());
       }
 
       function fileToBase64(file) {

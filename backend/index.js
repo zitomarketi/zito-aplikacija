@@ -116,6 +116,38 @@ function decodeBase64Image(data) {
   return Buffer.from(normalized, "base64");
 }
 
+async function downloadImageFromUrl(imageUrl) {
+  const normalized = String(imageUrl || "").trim();
+  if (!/^https?:\/\//i.test(normalized)) {
+    throw new Error("URL must start with http:// or https://");
+  }
+
+  const response = await fetch(normalized);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch URL (HTTP ${response.status})`);
+  }
+
+  const contentType = String(response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  const ext = IMAGE_MIME_TO_EXT[contentType];
+  if (!ext) {
+    throw new Error("URL must point to a PNG, JPG or WEBP image");
+  }
+
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_UPLOAD_SIZE_BYTES) {
+    throw new Error("Remote image is too large (max 8MB)");
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  if (!buffer.length) throw new Error("Remote image is empty");
+  if (buffer.length > MAX_UPLOAD_SIZE_BYTES) {
+    throw new Error("Remote image is too large (max 8MB)");
+  }
+
+  return { buffer, ext };
+}
+
 async function generateUniqueCardNumber() {
   for (let i = 0; i < 100; i += 1) {
     const candidate = String(Math.floor(1000000 + Math.random() * 8999999));
@@ -285,6 +317,27 @@ app.post("/admin/apk-gallery/upload", requireAdmin, (req, res) => {
 
   fs.writeFileSync(fullPath, buffer);
   return res.json({ ok: true, group, file: finalName, bytes: buffer.length });
+});
+
+app.post("/admin/apk-gallery/import-url", requireAdmin, async (req, res) => {
+  const group = String(req.body?.group || "").trim();
+  const dir = APK_ASSET_GROUP_DIRS[group];
+  if (!dir) return res.status(400).json({ error: "Invalid group" });
+
+  const rawName = sanitizeAssetFilename(req.body?.targetFile || req.body?.fileName || "");
+  if (!rawName) return res.status(400).json({ error: "fileName is required" });
+
+  try {
+    const { buffer, ext } = await downloadImageFromUrl(req.body?.imageUrl);
+    const finalName = rawName.toLowerCase().endsWith(ext) ? rawName : `${rawName}${ext}`;
+    const fullPath = path.join(dir, finalName);
+    if (!fullPath.startsWith(dir)) return res.status(400).json({ error: "Invalid file path" });
+
+    fs.writeFileSync(fullPath, buffer);
+    return res.json({ ok: true, group, file: finalName, bytes: buffer.length, source: "url" });
+  } catch (error) {
+    return res.status(400).json({ error: String(error?.message || error) });
+  }
 });
 
 app.post("/auth/register", async (req, res) => {
