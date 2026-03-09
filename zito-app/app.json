@@ -14,7 +14,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.zitoapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera access is used to scan barcodes for loyalty cards and product prices.",
+        "NSLocationWhenInUseUsageDescription": "Location access is used to find the nearest market.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

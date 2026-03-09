@@ -6,7 +6,11 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "ios:build:dev": "eas build --platform ios --profile development",
+    "ios:build:preview": "eas build --platform ios --profile preview",
+    "ios:build:prod": "eas build --platform ios --profile production",
+    "ios:submit:prod": "eas submit --platform ios --profile production"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -17,7 +21,9 @@
     "expo": "~55.0.4",
     "expo-camera": "~55.0.9",
     "expo-constants": "~55.0.7",
+    "expo-dev-client": "~55.0.11",
     "expo-device": "~55.0.9",
+    "expo-location": "~55.0.7",
     "expo-notifications": "~55.0.10",
     "expo-status-bar": "~55.0.4",
     "react": "19.2.0",

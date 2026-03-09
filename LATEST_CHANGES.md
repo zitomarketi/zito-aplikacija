@@ -137,3 +137,77 @@
   - blinking stops when user opens the `Известувања` tab (marks as read in UI state)
 - Added temporary dummy in-app notification trigger on login to quickly validate blinking behavior during testing.
 - Validated TypeScript (`npx tsc --noEmit`), built release APK, and installed on physical device.
+
+## March 6, 2026 - Release APK prepared for second device testing
+- Built fresh Android release package for manual install on another phone.
+- APK path:
+  - `C:\Users\ZITO\Desktop\zito aplikacija\zito-app\android\app\build\outputs\apk\release\app-release.apk`
+
+## March 9, 2026 - Workflow switch: iOS phase started
+- Project is now entering iOS version work for the same app.
+- Work mode agreement:
+  - User will explicitly specify whether each next task is for iOS or Android.
+- This note is saved as the active collaboration rule for upcoming tasks.
+
+## March 9, 2026 - [iOS] Step 1 setup baseline
+- Started iOS preparation phase for the same app parity with Android.
+- Updated `zito-app/app.json` iOS config:
+  - set `ios.bundleIdentifier`: `com.anonymous.zitoapp`
+  - added iOS permission texts in `ios.infoPlist`:
+    - `NSCameraUsageDescription`
+    - `NSLocationWhenInUseUsageDescription`
+- Confirmed dependencies include `expo-location` for nearest-market GPS feature.
+- TypeScript check passed (`npx tsc --noEmit`).
+- Note: actual iOS build/run requires macOS (Xcode/EAS build environment).
+
+## March 9, 2026 - [iOS] Step 2 build pipeline setup
+- Added EAS build configuration file: `zito-app/eas.json`.
+- Configured build profiles:
+  - `development` (internal, iOS simulator/dev client)
+  - `preview` (internal, iOS device build)
+  - `production` (store-ready profile)
+- Added npm scripts in `zito-app/package.json`:
+  - `ios:build:dev`
+  - `ios:build:preview`
+  - `ios:build:prod`
+  - `ios:submit:prod`
+- Validation:
+  - `eas.json` JSON parse check passed.
+  - TypeScript check passed (`npx tsc --noEmit`).
+- Note: actual iOS build execution runs through EAS cloud (or macOS local environment).
+
+## March 9, 2026 - [iOS] Step 3 location permission hardening
+- Switched nearest-market GPS flow from generic `navigator.geolocation` to `expo-location` in `zito-app/App.tsx`.
+- Added proper runtime permission flow compatible with iOS:
+  - `Location.hasServicesEnabledAsync()`
+  - `Location.requestForegroundPermissionsAsync()`
+  - `Location.getCurrentPositionAsync()`
+- Kept existing nearest-market UX (highlight + distance), now with more reliable permission handling for iPhone.
+- Validation:
+  - TypeScript check passed (`npx tsc --noEmit`).
+  - iOS bundle identifier remains configured: `com.anonymous.zitoapp`.
+
+## March 9, 2026 - [iOS] Step 4 status (EAS build initiation)
+- Started iOS EAS preview build from CLI.
+- Fixed required iOS/EAS config blockers:
+  - Added `ios.infoPlist.ITSAppUsesNonExemptEncryption = false` in `zito-app/app.json`.
+  - Added `cli.appVersionSource = "remote"` in `zito-app/eas.json`.
+- Build now reaches credentials phase successfully.
+- Current blocker:
+  - EAS reports missing suitable iOS credentials for internal distribution in non-interactive mode.
+  - Requires one-time interactive credentials setup (`Apple login / certificates / provisioning`).
+
+## March 9, 2026 - [iOS] Step 4 completed (development simulator build)
+- Installed missing `expo-dev-client` dependency required for `development` iOS EAS builds.
+- Ran EAS iOS build successfully with profile `development` (simulator build, no paid Apple Developer required).
+- Build completed and is ready for installation via Expo link/QR.
+- Build details:
+  - Build ID: `5707cf99-6e90-4652-ba44-39d3e199a3af`
+  - URL: `https://expo.dev/accounts/gnastev/projects/zito-app/builds/5707cf99-6e90-4652-ba44-39d3e199a3af`
+
+## March 9, 2026 - [iOS] Runtime testing handoff to macOS
+- Confirmed iOS simulator build is created, but cannot be executed on Windows environment.
+- Agreed to continue iOS runtime testing and installation flow from macOS.
+- Next continuation point on macOS:
+  - open existing EAS iOS build
+  - run parity QA and fix remaining iOS-specific issues.

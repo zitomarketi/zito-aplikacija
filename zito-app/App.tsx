@@ -2,6 +2,7 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
+import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
@@ -327,6 +328,13 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     open_in_maps: "Отвори во мапа",
     no_coordinates: "Нема GPS координати",
     coordinates_label: "Координати",
+    locations_search_placeholder: "Пребарај маркет, адреса или населено место",
+    locations_find_nearest: "Најблизок маркет",
+    locations_nearest_found: "Најблизок е",
+    locations_gps_unavailable: "GPS не е достапен на уредот.",
+    locations_gps_permission: "Нема GPS дозвола или локацијата е исклучена.",
+    locations_gps_no_markets: "Нема маркети со GPS координати за пребарување.",
+    locations_no_results: "Нема резултати за пребарувањето.",
     logout: "Одјава",
     language: "Јазик",
     lang_mk: "Македонски",
@@ -456,6 +464,13 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     open_in_maps: "Open in Maps",
     no_coordinates: "No GPS coordinates",
     coordinates_label: "Coordinates",
+    locations_search_placeholder: "Search market, address or settlement",
+    locations_find_nearest: "Nearest market",
+    locations_nearest_found: "Nearest is",
+    locations_gps_unavailable: "GPS is not available on this device.",
+    locations_gps_permission: "GPS permission denied or location is turned off.",
+    locations_gps_no_markets: "No markets with GPS coordinates available.",
+    locations_no_results: "No results found for this search.",
     logout: "Logout",
     language: "Language",
     lang_mk: "Macedonian",
@@ -585,6 +600,13 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     open_in_maps: "Hap në Maps",
     no_coordinates: "Nuk ka koordinata GPS",
     coordinates_label: "Koordinata",
+    locations_search_placeholder: "Kerko market, adrese ose vendbanim",
+    locations_find_nearest: "Marketi me i afert",
+    locations_nearest_found: "Me i aferti eshte",
+    locations_gps_unavailable: "GPS nuk eshte i disponueshem ne kete pajisje.",
+    locations_gps_permission: "Leja per GPS mungon ose lokacioni eshte i fikur.",
+    locations_gps_no_markets: "Nuk ka markete me koordinata GPS.",
+    locations_no_results: "Nuk u gjet asnje rezultat.",
     logout: "Dil",
     language: "Gjuha",
     lang_mk: "Maqedonisht",
@@ -714,6 +736,13 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     open_in_maps: "Haritada ac",
     no_coordinates: "GPS koordinati yok",
     coordinates_label: "Koordinatlar",
+    locations_search_placeholder: "Market, adres veya yerlesim ara",
+    locations_find_nearest: "En yakin market",
+    locations_nearest_found: "En yakin",
+    locations_gps_unavailable: "Bu cihazda GPS kullanilamiyor.",
+    locations_gps_permission: "GPS izni yok veya konum kapali.",
+    locations_gps_no_markets: "GPS koordinatli market bulunamadi.",
+    locations_no_results: "Bu arama icin sonuc yok.",
     logout: "Cikis",
     language: "Dil",
     lang_mk: "Makedonca",
@@ -822,6 +851,23 @@ function resolveMarketCity(item: MarketLocation): string {
     if (entry.aliases.some((alias) => haystack.includes(alias))) return entry.city;
   }
   return "Останати";
+}
+
+function haversineDistanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const earthKm = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthKm * c;
 }
 
 Notifications.setNotificationHandler({
@@ -1215,21 +1261,24 @@ function HomeScreen({ user, card, onOpenShoppingList }: { user: User; card: Card
 
         <View style={[styles.showcaseSection, styles.bestDealsSection, { height: showcaseSectionHeight, backgroundColor: palette.card, borderColor: palette.border }]}>
           <OutlinedHeader text={t("home_best_deals")} />
-          <ScrollView
+          <FlatList
             style={styles.bestDealsScroll}
-            contentContainerStyle={styles.bestDealsGrid}
-            showsVerticalScrollIndicator
+            data={bestDealsMock}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
             nestedScrollEnabled
-          >
-            {bestDealsMock.map((item) => (
-              <View
-                key={item.id}
-                style={[styles.bestDealCard, { backgroundColor: palette.card }]}
-              >
+            removeClippedSubviews
+            initialNumToRender={9}
+            maxToRenderPerBatch={9}
+            windowSize={7}
+            contentContainerStyle={styles.bestDealsGrid}
+            columnWrapperStyle={styles.bestDealsRow}
+            renderItem={({ item }) => (
+              <View style={[styles.bestDealCard, { backgroundColor: palette.card }]}>
                 <Image source={item.image} style={styles.bestDealImage} resizeMode="cover" />
               </View>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
 
         <View style={styles.infoRow}>
@@ -1664,11 +1713,24 @@ function LocationsScreen() {
       .sort((a, b) => a.city.localeCompare(b.city, "mk"));
   }, []);
   const [selectedCity, setSelectedCity] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [nearestStatus, setNearestStatus] = useState("");
+  const [nearestKey, setNearestKey] = useState("");
   const cityButtons = useMemo(() => ["all", ...sections.map((section) => section.city)], [sections]);
-  const visibleSections = useMemo(
-    () => sections.filter((section) => selectedCity === "all" || section.city === selectedCity),
-    [sections, selectedCity],
-  );
+  const visibleSections = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    return sections
+      .filter((section) => selectedCity === "all" || section.city === selectedCity)
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => {
+          if (!normalized) return true;
+          const haystack = `${item.name} ${item.address} ${item.city}`.toLowerCase();
+          return haystack.includes(normalized);
+        }),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [sections, selectedCity, searchQuery]);
 
   const openMaps = async (item: MarketLocation) => {
     const hasCoords = typeof item.lat === "number" && typeof item.lng === "number";
@@ -1679,6 +1741,61 @@ function LocationsScreen() {
     await Linking.openURL(mapsUrl);
   };
 
+  const findNearestMarket = async () => {
+    const candidates = marketLocations.filter(
+      (item) =>
+        typeof item.lat === "number" &&
+        typeof item.lng === "number" &&
+        (selectedCity === "all" || resolveMarketCity(item) === selectedCity),
+    );
+    if (!candidates.length) {
+      setNearestStatus(t("locations_gps_no_markets"));
+      return;
+    }
+
+    const servicesEnabled = await Location.hasServicesEnabledAsync();
+    if (!servicesEnabled) {
+      setNearestStatus(t("locations_gps_permission"));
+      return;
+    }
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (permission.status !== "granted") {
+      setNearestStatus(t("locations_gps_permission"));
+      return;
+    }
+
+    try {
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const { latitude, longitude } = position.coords;
+      let nearest: MarketLocation | null = null;
+      let minDistance = Number.POSITIVE_INFINITY;
+
+      for (const item of candidates) {
+        if (item.lat == null || item.lng == null) continue;
+        const dist = haversineDistanceKm(latitude, longitude, item.lat, item.lng);
+        if (dist < minDistance) {
+          minDistance = dist;
+          nearest = item;
+        }
+      }
+
+      if (!nearest) {
+        setNearestStatus(t("locations_gps_no_markets"));
+        return;
+      }
+
+      const nearestCity = resolveMarketCity(nearest);
+      setSelectedCity(nearestCity);
+      setSearchQuery("");
+      setNearestKey(`${nearestCity}-${nearest.name}-${nearest.address}`);
+      setNearestStatus(`${t("locations_nearest_found")}: ${nearest.name} (${minDistance.toFixed(1)} km)`);
+    } catch {
+      setNearestStatus(t("locations_gps_unavailable"));
+    }
+  };
+
   return (
     <ScreenWrap
       title={t("screen_locations_title")}
@@ -1686,6 +1803,18 @@ function LocationsScreen() {
       titleStyle={[styles.flyersScreenTitle, { color: HEADLINE_COLOR, textShadowColor: HEADLINE_OUTLINE_COLOR, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
+      <TextInput
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={t("locations_search_placeholder")}
+        placeholderTextColor="#9A9A9A"
+        style={[styles.input, styles.locationSearchInput, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
+      />
+      <Pressable style={[styles.loginBtn, { marginTop: 0 }]} onPress={() => void findNearestMarket()}>
+        <Ionicons name="locate-outline" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("locations_find_nearest")}</Text>
+      </Pressable>
+      {nearestStatus ? <Text style={[styles.scanStatusText, { color: palette.muted }]}>{nearestStatus}</Text> : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locationCityChipsRow}>
         {cityButtons.map((city) => {
           const active = selectedCity === city;
@@ -1713,6 +1842,11 @@ function LocationsScreen() {
           );
         })}
       </ScrollView>
+      {visibleSections.length === 0 ? (
+        <View style={[styles.shoppingEmptyCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <Text style={[styles.shoppingEmptyText, { color: palette.muted }]}>{t("locations_no_results")}</Text>
+        </View>
+      ) : null}
       {visibleSections.map((section) => (
         <View key={section.city} style={styles.locationSection}>
           <Text style={[styles.locationCityTitle, { color: palette.text }]}>{section.city}</Text>
@@ -1721,7 +1855,16 @@ function LocationsScreen() {
             return (
               <View
                 key={`${section.city}-${item.name}-${item.address}`}
-                style={[styles.locationCard, { backgroundColor: palette.card, borderColor: palette.border }]}
+                style={[
+                  styles.locationCard,
+                  {
+                    backgroundColor: palette.card,
+                    borderColor:
+                      nearestKey === `${section.city}-${item.name}-${item.address}` ? colors.green : palette.border,
+                    borderWidth:
+                      nearestKey === `${section.city}-${item.name}-${item.address}` ? 2 : 1,
+                  },
+                ]}
               >
                 <Text style={[styles.locationName, { color: palette.text }]}>{item.name}</Text>
                 <Text style={[styles.locationAddress, { color: palette.muted }]}>
@@ -3216,12 +3359,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bestDealsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
     paddingVertical: 10,
     paddingHorizontal: 10,
     rowGap: 8,
+    gap: 8,
+  },
+  bestDealsRow: {
+    justifyContent: "space-between",
+    gap: 8,
   },
   bestDealCard: {
     width: "31.8%",
@@ -3441,6 +3586,9 @@ const styles = StyleSheet.create({
   locationSection: {
     marginBottom: 14,
     gap: 8,
+  },
+  locationSearchInput: {
+    marginBottom: 8,
   },
   locationCityChipsRow: {
     paddingBottom: 10,
