@@ -515,6 +515,27 @@ app.post("/admin/flyers", requireAdmin, (req, res) => {
     .catch((error) => res.status(500).json({ error: String(error) }));
 });
 
+app.get("/admin/flyers", requireAdmin, async (_req, res) => {
+  try {
+    const rows = await db.listFlyers();
+    return res.json(rows);
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+app.delete("/admin/flyers/:id", requireAdmin, async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "id is required" });
+  try {
+    const deleted = await db.deleteFlyerById(id);
+    if (!deleted) return res.status(404).json({ error: "Flyer not found" });
+    return res.json({ ok: true, id });
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
 app.post("/admin/notifications", requireAdmin, (req, res) => {
   const { title, body } = req.body || {};
   if (!title || !body) return res.status(400).json({ error: "title and body are required" });
@@ -527,6 +548,27 @@ app.post("/admin/notifications", requireAdmin, (req, res) => {
   db.addNotification(notice)
     .then((row) => res.json(row))
     .catch((error) => res.status(500).json({ error: String(error) }));
+});
+
+app.get("/admin/notifications", requireAdmin, async (_req, res) => {
+  try {
+    const rows = await db.listNotifications();
+    return res.json(rows);
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+app.delete("/admin/notifications/:id", requireAdmin, async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "id is required" });
+  try {
+    const deleted = await db.deleteNotificationById(id);
+    if (!deleted) return res.status(404).json({ error: "Notification not found" });
+    return res.json({ ok: true, id });
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
 });
 
 app.post("/admin/push-broadcast", requireAdmin, async (req, res) => {
@@ -562,6 +604,29 @@ app.post("/admin/prices", requireAdmin, async (req, res) => {
       updatedAt: new Date().toISOString(),
     });
     return res.json(saved);
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+app.get("/admin/prices", requireAdmin, async (req, res) => {
+  const limitRaw = Number(req.query?.limit || 500);
+  const limit = Number.isFinite(limitRaw) ? limitRaw : 500;
+  try {
+    const rows = await db.listProductPrices(limit);
+    return res.json(rows);
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+app.delete("/admin/prices/:barcode", requireAdmin, async (req, res) => {
+  const barcode = normalizeBarcode(req.params?.barcode);
+  if (!isValidBarcode(barcode)) return res.status(400).json({ error: "Invalid barcode format" });
+  try {
+    const deleted = await db.deleteProductPriceByBarcode(barcode);
+    if (!deleted) return res.status(404).json({ error: "Price item not found" });
+    return res.json({ ok: true, barcode });
   } catch (error) {
     return res.status(500).json({ error: String(error) });
   }

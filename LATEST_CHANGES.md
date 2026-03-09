@@ -222,3 +222,31 @@
   - added `zito-app/.easignore` to reduce EAS archive size and exclude local-only files
   - added root `.gitignore` for local working folders (`akcii/`, `flaeri/`)
 - Validation: `npx tsc --noEmit` passed.
+
+## March 9, 2026 - [iOS] Parity QA checklist prepared
+- Added structured iOS parity verification checklist:
+  - file: `IOS_PARITY_QA_CHECKLIST.md`
+  - includes setup, screen-by-screen tests, iOS-specific checks, and defect reporting format.
+- Purpose: execute parity QA on macOS/iPhone and fix issues in controlled batches.
+
+## March 9, 2026 - [Backend/CMS] Admin CRUD readiness pass
+- Extended DB layer (`backend/db.js`) with CMS management operations:
+  - list product prices (`listProductPrices`)
+  - delete flyer by id
+  - delete notification by id
+  - delete product price by barcode
+  - implemented for both SQLite and Postgres stores
+- Added admin API endpoints (`backend/index.js`):
+  - `GET /admin/flyers`
+  - `DELETE /admin/flyers/:id`
+  - `GET /admin/notifications`
+  - `DELETE /admin/notifications/:id`
+  - `GET /admin/prices?limit=...`
+  - `DELETE /admin/prices/:barcode`
+- Upgraded admin panel UI (`backend/public/admin.html`):
+  - added live lists for flyers/notifications/prices
+  - added refresh and delete actions per item
+  - preserved existing create actions and push broadcast
+- Validation:
+  - `node --check backend/index.js` passed
+  - `node --check backend/db.js` passed

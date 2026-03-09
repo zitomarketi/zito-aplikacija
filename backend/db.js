@@ -137,6 +137,13 @@ function createSqliteStore(filePath) {
     async listNotifications() {
       return all("SELECT id, title, body, created_at AS createdAt FROM notifications ORDER BY id DESC");
     },
+    async listProductPrices(limit = 500) {
+      const safeLimit = Math.max(1, Math.min(2000, Number(limit) || 500));
+      return all(
+        "SELECT barcode, name, price, currency, unit, updated_at AS updatedAt FROM product_prices ORDER BY updated_at DESC, barcode ASC LIMIT ?",
+        [safeLimit],
+      );
+    },
     async addFlyer(flyer) {
       await run("INSERT INTO flyers (id, title, price, image) VALUES (?, ?, ?, ?)", [
         flyer.id,
@@ -154,6 +161,14 @@ function createSqliteStore(filePath) {
         notice.createdAt,
       ]);
       return notice;
+    },
+    async deleteFlyerById(id) {
+      const result = await run("DELETE FROM flyers WHERE id = ?", [id]);
+      return Number(result?.changes || 0) > 0;
+    },
+    async deleteNotificationById(id) {
+      const result = await run("DELETE FROM notifications WHERE id = ?", [id]);
+      return Number(result?.changes || 0) > 0;
     },
     async addPushToken(token) {
       await run("INSERT OR IGNORE INTO push_tokens (token) VALUES (?)", [token]);
@@ -179,6 +194,10 @@ function createSqliteStore(filePath) {
         [item.barcode, item.name, item.price, item.currency, item.unit, item.updatedAt],
       );
       return this.getProductPriceByBarcode(item.barcode);
+    },
+    async deleteProductPriceByBarcode(barcode) {
+      const result = await run("DELETE FROM product_prices WHERE barcode = ?", [barcode]);
+      return Number(result?.changes || 0) > 0;
     },
   };
 }
@@ -251,6 +270,14 @@ function createPgStore(connectionString) {
       const r = await q("SELECT id, title, body, created_at AS \"createdAt\" FROM notifications ORDER BY id DESC");
       return r.rows;
     },
+    async listProductPrices(limit = 500) {
+      const safeLimit = Math.max(1, Math.min(2000, Number(limit) || 500));
+      const r = await q(
+        "SELECT barcode, name, price, currency, unit, updated_at AS \"updatedAt\" FROM product_prices ORDER BY updated_at DESC, barcode ASC LIMIT $1",
+        [safeLimit],
+      );
+      return r.rows;
+    },
     async addFlyer(flyer) {
       await q("INSERT INTO flyers (id, title, price, image) VALUES ($1, $2, $3, $4)", [
         flyer.id,
@@ -268,6 +295,14 @@ function createPgStore(connectionString) {
         notice.createdAt,
       ]);
       return notice;
+    },
+    async deleteFlyerById(id) {
+      const r = await q("DELETE FROM flyers WHERE id = $1", [id]);
+      return Number(r.rowCount || 0) > 0;
+    },
+    async deleteNotificationById(id) {
+      const r = await q("DELETE FROM notifications WHERE id = $1", [id]);
+      return Number(r.rowCount || 0) > 0;
     },
     async addPushToken(token) {
       await q("INSERT INTO push_tokens (token) VALUES ($1) ON CONFLICT (token) DO NOTHING", [token]);
@@ -293,6 +328,10 @@ function createPgStore(connectionString) {
         [item.barcode, item.name, item.price, item.currency, item.unit, item.updatedAt],
       );
       return this.getProductPriceByBarcode(item.barcode);
+    },
+    async deleteProductPriceByBarcode(barcode) {
+      const r = await q("DELETE FROM product_prices WHERE barcode = $1", [barcode]);
+      return Number(r.rowCount || 0) > 0;
     },
   };
 }

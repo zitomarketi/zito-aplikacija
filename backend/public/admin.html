@@ -17,7 +17,7 @@
         border-radius: 12px;
         padding: 16px;
         margin-bottom: 14px;
-        max-width: 560px;
+        max-width: 860px;
       }
       input {
         width: 100%;
@@ -41,6 +41,30 @@
         padding: 12px;
         border-radius: 8px;
         overflow: auto;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .row:last-child {
+        border-bottom: 0;
+      }
+      .meta {
+        font-size: 12px;
+        color: #666;
+      }
+      .btn-danger {
+        background: #b31f1f;
+      }
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
       }
     </style>
   </head>
@@ -72,17 +96,53 @@
       <button onclick="sendPush()">Send Push</button>
     </div>
 
+    <div class="card">
+      <div class="section-head">
+        <h3>Flyers</h3>
+        <button onclick="loadFlyers()">Refresh</button>
+      </div>
+      <div id="flyersList"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h3>Notifications</h3>
+        <button onclick="loadNotifications()">Refresh</button>
+      </div>
+      <div id="notificationsList"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h3>Product Prices</h3>
+        <button onclick="loadPrices()">Refresh</button>
+      </div>
+      <div id="pricesList"></div>
+    </div>
+
     <pre id="out">Ready.</pre>
 
     <script>
       const base = location.origin;
       const out = document.getElementById("out");
+      const flyersList = document.getElementById("flyersList");
+      const notificationsList = document.getElementById("notificationsList");
+      const pricesList = document.getElementById("pricesList");
 
       function adminHeaders() {
         return {
           "Content-Type": "application/json",
           "x-admin-token": document.getElementById("token").value.trim(),
         };
+      }
+
+      function escapeHtml(text) {
+        return String(text || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#039;");
       }
 
       async function call(path, body) {
@@ -93,20 +153,46 @@
         });
         const text = await res.text();
         out.textContent = path + "\n" + text;
+        return res.ok;
+      }
+
+      async function callDelete(path) {
+        const res = await fetch(base + path, {
+          method: "DELETE",
+          headers: adminHeaders(),
+        });
+        const text = await res.text();
+        out.textContent = path + "\n" + text;
+        return res.ok;
+      }
+
+      async function callGet(path) {
+        const res = await fetch(base + path, {
+          method: "GET",
+          headers: adminHeaders(),
+        });
+        const text = await res.text();
+        if (!res.ok) {
+          out.textContent = path + "\n" + text;
+          return null;
+        }
+        return JSON.parse(text);
       }
 
       async function addFlyer() {
-        await call("/admin/flyers", {
+        const ok = await call("/admin/flyers", {
           title: document.getElementById("flyerTitle").value,
           price: document.getElementById("flyerPrice").value,
         });
+        if (ok) await loadFlyers();
       }
 
       async function addNotification() {
-        await call("/admin/notifications", {
+        const ok = await call("/admin/notifications", {
           title: document.getElementById("noteTitle").value,
           body: document.getElementById("noteBody").value,
         });
+        if (ok) await loadNotifications();
       }
 
       async function sendPush() {
@@ -115,6 +201,90 @@
           body: document.getElementById("pushBody").value,
         });
       }
+
+      async function loadFlyers() {
+        const rows = await callGet("/admin/flyers");
+        if (!rows) return;
+        flyersList.innerHTML = rows.length
+          ? rows
+              .map(
+                (x) => `
+            <div class="row">
+              <div>
+                <div><strong>${escapeHtml(x.title)}</strong> - ${escapeHtml(x.price)}</div>
+                <div class="meta">ID: ${escapeHtml(x.id)}</div>
+              </div>
+              <button class="btn-danger" onclick="deleteFlyer('${escapeHtml(x.id)}')">Delete</button>
+            </div>`,
+              )
+              .join("")
+          : "<div class='meta'>No flyers</div>";
+      }
+
+      async function loadNotifications() {
+        const rows = await callGet("/admin/notifications");
+        if (!rows) return;
+        notificationsList.innerHTML = rows.length
+          ? rows
+              .map(
+                (x) => `
+            <div class="row">
+              <div>
+                <div><strong>${escapeHtml(x.title)}</strong></div>
+                <div>${escapeHtml(x.body)}</div>
+                <div class="meta">ID: ${escapeHtml(x.id)}</div>
+              </div>
+              <button class="btn-danger" onclick="deleteNotification('${escapeHtml(x.id)}')">Delete</button>
+            </div>`,
+              )
+              .join("")
+          : "<div class='meta'>No notifications</div>";
+      }
+
+      async function loadPrices() {
+        const rows = await callGet("/admin/prices?limit=300");
+        if (!rows) return;
+        pricesList.innerHTML = rows.length
+          ? rows
+              .map(
+                (x) => `
+            <div class="row">
+              <div>
+                <div><strong>${escapeHtml(x.name)}</strong> - ${escapeHtml(x.price)} ${escapeHtml(x.currency || "")}</div>
+                <div class="meta">Barcode: ${escapeHtml(x.barcode)}${x.unit ? ` | Unit: ${escapeHtml(x.unit)}` : ""}</div>
+              </div>
+              <button class="btn-danger" onclick="deletePrice('${escapeHtml(x.barcode)}')">Delete</button>
+            </div>`,
+              )
+              .join("")
+          : "<div class='meta'>No product prices</div>";
+      }
+
+      async function deleteFlyer(id) {
+        if (!confirm("Delete flyer?")) return;
+        const ok = await callDelete("/admin/flyers/" + encodeURIComponent(id));
+        if (ok) await loadFlyers();
+      }
+
+      async function deleteNotification(id) {
+        if (!confirm("Delete notification?")) return;
+        const ok = await callDelete("/admin/notifications/" + encodeURIComponent(id));
+        if (ok) await loadNotifications();
+      }
+
+      async function deletePrice(barcode) {
+        if (!confirm("Delete price item?")) return;
+        const ok = await callDelete("/admin/prices/" + encodeURIComponent(barcode));
+        if (ok) await loadPrices();
+      }
+
+      async function boot() {
+        await loadFlyers();
+        await loadNotifications();
+        await loadPrices();
+      }
+
+      boot();
     </script>
   </body>
 </html>
