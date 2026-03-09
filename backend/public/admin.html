@@ -478,7 +478,10 @@
           const file = event?.target?.files?.[0];
           if (!file || !pendingUploadTarget) return;
           const mimeType = String(file.type || "").toLowerCase();
-          if (!["image/png", "image/jpeg", "image/webp", "application/pdf"].includes(mimeType)) {
+          const ext = String(file.name || "").toLowerCase().split(".").pop() || "";
+          const allowedMime = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
+          const allowedExt = ["png", "jpg", "jpeg", "webp", "pdf"];
+          if (!allowedMime.includes(mimeType) && !allowedExt.includes(ext)) {
             out.textContent = "Only PNG/JPG/WEBP/PDF files are supported.";
             return;
           }

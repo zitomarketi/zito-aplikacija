@@ -356,19 +356,23 @@ app.post("/admin/apk-gallery/upload", requireAdmin, (req, res) => {
   const dir = APK_ASSET_GROUP_DIRS[group];
   if (!dir) return res.status(400).json({ error: "Invalid group" });
 
-  const mimeType = String(req.body?.mimeType || "").trim().toLowerCase();
-  const ext = ASSET_MIME_TO_EXT[mimeType];
-  if (!ext) return res.status(400).json({ error: "Only png, jpg, webp, pdf are supported" });
-
   const rawName = sanitizeAssetFilename(req.body?.targetFile || req.body?.fileName || "");
   if (!rawName) return res.status(400).json({ error: "fileName is required" });
+  const mimeType = String(req.body?.mimeType || "").trim().toLowerCase();
+  const extFromMime = ASSET_MIME_TO_EXT[mimeType] || "";
+  const extFromName = ASSET_URL_EXT_TO_EXT[path.extname(rawName).toLowerCase()] || "";
+
+  const buffer = decodeBase64Image(req.body?.dataBase64);
+  if (!buffer || buffer.length === 0) return res.status(400).json({ error: "File payload is empty" });
+  if (buffer.length > MAX_UPLOAD_SIZE_BYTES) return res.status(400).json({ error: "File is too large (max 8MB)" });
+
+  const extFromBuffer = detectAssetExtFromBuffer(buffer);
+  const ext = extFromMime || extFromName || extFromBuffer;
+  if (!ext) return res.status(400).json({ error: "Only png, jpg, webp, pdf are supported" });
+
   const finalName = rawName.toLowerCase().endsWith(ext) ? rawName : `${rawName}${ext}`;
   const fullPath = path.join(dir, finalName);
   if (!fullPath.startsWith(dir)) return res.status(400).json({ error: "Invalid file path" });
-
-  const buffer = decodeBase64Image(req.body?.dataBase64);
-  if (!buffer || buffer.length === 0) return res.status(400).json({ error: "Image payload is empty" });
-  if (buffer.length > MAX_UPLOAD_SIZE_BYTES) return res.status(400).json({ error: "Image is too large (max 8MB)" });
 
   fs.writeFileSync(fullPath, buffer);
   return res.json({ ok: true, group, file: finalName, bytes: buffer.length });
