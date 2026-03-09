@@ -265,3 +265,52 @@
 - Validation:
   - `npx tsc --noEmit` passed
   - JSON parse checks for `app.json` and `eas.json` passed
+
+## March 9, 2026 - Security hardening pass (auth + backend secrets)
+- Removed hardcoded fallback login path from `zito-app/App.tsx`:
+  - deleted demo bypass for `korisnik@zito.mk` / `password123` when backend login fails.
+- Removed temporary dummy-notification injection effect from `zito-app/App.tsx`.
+- Hardened backend secret handling in `backend/index.js`:
+  - added production guard: backend now fails fast if `ADMIN_TOKEN` or `JWT_SECRET` are missing/weak (`change-me`).
+  - removed startup log that printed admin token.
+- Updated admin panel token input in `backend/public/admin.html`:
+  - removed hardcoded default token value.
+  - added neutral placeholder (`Enter admin token from environment`).
+- Validation completed:
+  - `npx tsc --noEmit` (app) passed.
+  - `node --check backend/index.js` passed.
+  - `node --check backend/db.js` passed.
+- Git delivery:
+  - commit: `577ddbf`
+  - branch: `main`
+  - pushed to `origin/main` (`https://github.com/nastevg/zito-aplikacija.git`).
+
+## March 9, 2026 - [Backend/OAuth] Render domain switch + Google redirect fix
+- Updated Render service base URL in infra config:
+  - `backend/render.yaml` -> `BACKEND_PUBLIC_URL = https://zito-cms-backend.onrender.com`
+- Git delivery for domain switch:
+  - commit: `917b2b7`
+  - branch: `main`
+  - pushed to `origin/main`
+- Diagnosed Google login error chain:
+  - first error: `google OAuth is not configured on backend` (missing `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in Render env)
+  - second error: `Error 400: redirect_uri_mismatch`
+- Confirmed required Google OAuth callback URI for current backend domain:
+  - `https://zito-cms-backend.onrender.com/auth/oauth/google/callback`
+- Operational note:
+  - Render env must use `GOOGLE_CLIENT_ID` and an enabled `GOOGLE_CLIENT_SECRET` from the same Google OAuth client, followed by backend redeploy.
+
+## March 9, 2026 - [Backend/CMS] PDF upload support hardening in Admin Visual Catalog
+- Extended APK Visual Catalog backend and admin UI to support PDF assets in addition to images:
+  - upload accepts `png/jpg/webp/pdf`
+  - import by URL accepts direct `png/jpg/webp/pdf` links
+  - PDF entries render as PDF tiles in admin gallery with open action
+- Improved upload robustness:
+  - fallback validation by filename extension and file signature when MIME type is missing/incorrect
+  - avoids false rejections for browser-uploaded PDFs
+- Increased upload limits for larger flyer files:
+  - `MAX_UPLOAD_SIZE_BYTES` raised to `50MB` in `backend/index.js`
+  - JSON body limit raised to `80mb` for base64 uploads
+  - oversized payload now returns structured JSON error (`413`) instead of HTML stack
+- Git delivery:
+  - commits on `main`: `7314c65`, `3a8f235`, `6efade1`, `f01b825`

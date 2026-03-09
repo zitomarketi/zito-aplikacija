@@ -32,8 +32,8 @@ const APK_ASSET_GROUP_DIRS = {
 const db = dbFactory();
 const oauthStateStore = new Map();
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
-const JSON_BODY_LIMIT = "40mb";
+const MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
+const JSON_BODY_LIMIT = "80mb";
 const ASSET_MIME_TO_EXT = {
   "image/png": ".png",
   "image/jpeg": ".jpg",
@@ -184,14 +184,14 @@ async function downloadImageFromUrl(imageUrl) {
 
   const contentLength = Number(response.headers.get("content-length") || 0);
   if (Number.isFinite(contentLength) && contentLength > MAX_UPLOAD_SIZE_BYTES) {
-    throw new Error("Remote file is too large (max 25MB)");
+    throw new Error("Remote file is too large (max 50MB)");
   }
 
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   if (!buffer.length) throw new Error("Remote image is empty");
   if (buffer.length > MAX_UPLOAD_SIZE_BYTES) {
-    throw new Error("Remote file is too large (max 25MB)");
+    throw new Error("Remote file is too large (max 50MB)");
   }
 
   const extFromBuffer = detectAssetExtFromBuffer(buffer);
@@ -365,7 +365,7 @@ app.post("/admin/apk-gallery/upload", requireAdmin, (req, res) => {
 
   const buffer = decodeBase64Image(req.body?.dataBase64);
   if (!buffer || buffer.length === 0) return res.status(400).json({ error: "File payload is empty" });
-  if (buffer.length > MAX_UPLOAD_SIZE_BYTES) return res.status(400).json({ error: "File is too large (max 25MB)" });
+  if (buffer.length > MAX_UPLOAD_SIZE_BYTES) return res.status(400).json({ error: "File is too large (max 50MB)" });
 
   const extFromBuffer = detectAssetExtFromBuffer(buffer);
   const ext = extFromMime || extFromName || extFromBuffer;
@@ -847,7 +847,7 @@ app.delete("/admin/prices/:barcode", requireAdmin, async (req, res) => {
 
 app.use((error, _req, res, next) => {
   if (error?.type === "entity.too.large") {
-    return res.status(413).json({ error: "Request body is too large. Max upload size is 25MB." });
+    return res.status(413).json({ error: "Request body is too large. Max upload size is 50MB." });
   }
   return next(error);
 });
