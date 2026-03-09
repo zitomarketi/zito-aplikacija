@@ -66,6 +66,11 @@
         justify-content: space-between;
         gap: 12px;
       }
+      .token-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
     </style>
   </head>
   <body>
@@ -73,6 +78,10 @@
     <div class="card">
       <label>Admin token</label>
       <input id="token" value="" placeholder="Enter admin token from environment" />
+      <div class="token-actions">
+        <button type="button" onclick="saveToken()">Save token</button>
+        <button type="button" class="btn-danger" onclick="logout()">Logout</button>
+      </div>
     </div>
 
     <div class="card">
@@ -124,10 +133,12 @@
 
     <script>
       const base = location.origin;
+      const ADMIN_TOKEN_STORAGE_KEY = "zito.admin.token";
       const out = document.getElementById("out");
       const flyersList = document.getElementById("flyersList");
       const notificationsList = document.getElementById("notificationsList");
       const pricesList = document.getElementById("pricesList");
+      const tokenInput = document.getElementById("token");
 
       function adminHeaders() {
         return {
@@ -143,6 +154,22 @@
           .replace(/>/g, "&gt;")
           .replace(/\"/g, "&quot;")
           .replace(/'/g, "&#039;");
+      }
+
+      function saveToken() {
+        const value = tokenInput.value.trim();
+        if (!value) {
+          out.textContent = "Admin token is empty.";
+          return;
+        }
+        localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, value);
+        out.textContent = "Admin token saved in this browser.";
+      }
+
+      function logout() {
+        localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+        tokenInput.value = "";
+        out.textContent = "Saved admin token removed.";
       }
 
       async function call(path, body) {
@@ -279,6 +306,10 @@
       }
 
       async function boot() {
+        const savedToken = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+        if (savedToken) tokenInput.value = savedToken;
+        tokenInput.addEventListener("change", saveToken);
+        tokenInput.addEventListener("blur", saveToken);
         await loadFlyers();
         await loadNotifications();
         await loadPrices();
