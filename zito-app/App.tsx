@@ -1304,7 +1304,7 @@ function HomeScreen({
               const imageSource = item.image ? item.image : targetUrl ? { uri: targetUrl } : null;
               return (
                 <Pressable
-                  style={[styles.currentFlyerCard, { backgroundColor: palette.card, width: currentCardWidth, minHeight: currentCardHeight }]}
+                  style={[styles.currentFlyerCard, { backgroundColor: palette.card, width: currentCardWidth, height: currentCardHeight }]}
                   onPress={targetUrl ? () => void openCurrentFlyer(item) : undefined}
                 >
                   {isPdf && targetUrl ? (
@@ -1314,6 +1314,7 @@ function HomeScreen({
                         style={styles.currentFlyerPdfWebView}
                         page={1}
                         singlePage
+                        fitPolicy={0}
                         trustAllCerts={false}
                       />
                       <View style={styles.currentFlyerPdfBadge}>
@@ -3459,8 +3460,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   currentFlyerPdfWebView: {
-    width: "100%",
-    height: "100%",
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "#FFFFFF",
   },
   currentFlyerPdfBadge: {
