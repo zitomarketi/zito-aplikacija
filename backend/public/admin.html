@@ -66,6 +66,34 @@
         justify-content: space-between;
         gap: 12px;
       }
+      .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 12px;
+      }
+      .gallery-item {
+        border: 1px solid #e3e3e3;
+        border-radius: 10px;
+        padding: 8px;
+        background: #fafafa;
+      }
+      .gallery-item img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+      }
+      .gallery-label {
+        margin-top: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .gallery-file {
+        font-size: 12px;
+        color: #666;
+        word-break: break-word;
+      }
       .token-actions {
         display: flex;
         gap: 8px;
@@ -129,6 +157,17 @@
       <div id="pricesList"></div>
     </div>
 
+    <div class="card">
+      <div class="section-head">
+        <h3>APK Visual Catalog (mockup)</h3>
+        <button onclick="loadApkGallery()">Refresh</button>
+      </div>
+      <h4>Тековни летоци</h4>
+      <div id="apkCurrentFlyers" class="gallery-grid"></div>
+      <h4 style="margin-top: 16px">Најдобри акции</h4>
+      <div id="apkBestDeals" class="gallery-grid"></div>
+    </div>
+
     <pre id="out">Ready.</pre>
 
     <script>
@@ -138,6 +177,8 @@
       const flyersList = document.getElementById("flyersList");
       const notificationsList = document.getElementById("notificationsList");
       const pricesList = document.getElementById("pricesList");
+      const apkCurrentFlyers = document.getElementById("apkCurrentFlyers");
+      const apkBestDeals = document.getElementById("apkBestDeals");
       const tokenInput = document.getElementById("token");
 
       function adminHeaders() {
@@ -287,6 +328,28 @@
           : "<div class='meta'>No product prices</div>";
       }
 
+      function renderGallery(target, items) {
+        target.innerHTML = items.length
+          ? items
+              .map(
+                (item) => `
+            <div class="gallery-item">
+              <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.label)}" loading="lazy" />
+              <div class="gallery-label">${escapeHtml(item.label)}</div>
+              <div class="gallery-file">${escapeHtml(item.file)}</div>
+            </div>`,
+              )
+              .join("")
+          : "<div class='meta'>No images found</div>";
+      }
+
+      async function loadApkGallery() {
+        const data = await callGet("/admin/apk-gallery");
+        if (!data) return;
+        renderGallery(apkCurrentFlyers, Array.isArray(data.currentFlyers) ? data.currentFlyers : []);
+        renderGallery(apkBestDeals, Array.isArray(data.bestDeals) ? data.bestDeals : []);
+      }
+
       async function deleteFlyer(id) {
         if (!confirm("Delete flyer?")) return;
         const ok = await callDelete("/admin/flyers/" + encodeURIComponent(id));
@@ -313,6 +376,7 @@
         await loadFlyers();
         await loadNotifications();
         await loadPrices();
+        await loadApkGallery();
       }
 
       boot();

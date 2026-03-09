@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const jwt = require("jsonwebtoken");
@@ -24,6 +25,10 @@ if (
 const ADMIN_TOKEN = envAdminToken && envAdminToken !== "change-me" ? envAdminToken : "local-dev-admin-token";
 const JWT_SECRET = envJwtSecret && envJwtSecret !== "change-me" ? envJwtSecret : "local-dev-jwt-secret";
 const BACKEND_PUBLIC_URL = (process.env.BACKEND_PUBLIC_URL || "").replace(/\/+$/, "");
+const APK_ASSET_GROUP_DIRS = {
+  letoci: path.resolve(__dirname, "..", "zito-app", "assets", "images", "letoci"),
+  akcii: path.resolve(__dirname, "..", "zito-app", "assets", "images", "akcii"),
+};
 const db = dbFactory();
 const oauthStateStore = new Map();
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
@@ -80,6 +85,15 @@ function normalizeBarcode(input) {
 
 function isValidBarcode(barcode) {
   return /^\d{6,32}$/.test(barcode);
+}
+
+function listApkAssetFiles(group) {
+  const dir = APK_ASSET_GROUP_DIRS[group];
+  if (!dir || !fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((name) => /\.(png|jpe?g|webp)$/i.test(name))
+    .sort((a, b) => a.localeCompare(b));
 }
 
 async function generateUniqueCardNumber() {
@@ -196,6 +210,38 @@ async function sendExpoPush(tokens, title, body) {
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "zito-backend", port: PORT });
+});
+
+app.get("/cms/apk-asset/:group/:file", (req, res) => {
+  const group = String(req.params?.group || "").trim();
+  const dir = APK_ASSET_GROUP_DIRS[group];
+  if (!dir) return res.status(404).send("Unknown group");
+
+  const file = path.basename(String(req.params?.file || ""));
+  if (!file || !/\.(png|jpe?g|webp)$/i.test(file)) return res.status(400).send("Invalid file");
+
+  const fullPath = path.join(dir, file);
+  if (!fullPath.startsWith(dir)) return res.status(400).send("Invalid path");
+  if (!fs.existsSync(fullPath)) return res.status(404).send("Not found");
+
+  return res.sendFile(fullPath);
+});
+
+app.get("/admin/apk-gallery", requireAdmin, (req, res) => {
+  const mkUrl = (group, file) => `${getBackendBaseUrl(req)}/cms/apk-asset/${group}/${encodeURIComponent(file)}`;
+  const currentFlyers = listApkAssetFiles("letoci").map((file, idx) => ({
+    id: `letok-${idx + 1}`,
+    label: `Леток ${idx + 1}`,
+    file,
+    imageUrl: mkUrl("letoci", file),
+  }));
+  const bestDeals = listApkAssetFiles("akcii").map((file, idx) => ({
+    id: `akcija-${idx + 1}`,
+    label: `Акција ${idx + 1}`,
+    file,
+    imageUrl: mkUrl("akcii", file),
+  }));
+  return res.json({ currentFlyers, bestDeals });
 });
 
 app.post("/auth/register", async (req, res) => {
