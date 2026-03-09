@@ -32,9 +32,15 @@ const APK_ASSET_GROUP_DIRS = {
 const db = dbFactory();
 const oauthStateStore = new Map();
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
+const IMAGE_MIME_TO_EXT = {
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/webp": ".webp",
+};
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 function sanitizeUser(user) {
@@ -94,6 +100,20 @@ function listApkAssetFiles(group) {
     .readdirSync(dir)
     .filter((name) => /\.(png|jpe?g|webp)$/i.test(name))
     .sort((a, b) => a.localeCompare(b));
+}
+
+function sanitizeAssetFilename(name) {
+  const base = String(name || "")
+    .replace(/[^\w.\-() ]+/g, "_")
+    .replace(/\s+/g, " ")
+    .trim();
+  return path.basename(base);
+}
+
+function decodeBase64Image(data) {
+  const normalized = String(data || "").trim();
+  if (!normalized) return null;
+  return Buffer.from(normalized, "base64");
 }
 
 async function generateUniqueCardNumber() {
@@ -242,6 +262,29 @@ app.get("/admin/apk-gallery", requireAdmin, (req, res) => {
     imageUrl: mkUrl("akcii", file),
   }));
   return res.json({ currentFlyers, bestDeals });
+});
+
+app.post("/admin/apk-gallery/upload", requireAdmin, (req, res) => {
+  const group = String(req.body?.group || "").trim();
+  const dir = APK_ASSET_GROUP_DIRS[group];
+  if (!dir) return res.status(400).json({ error: "Invalid group" });
+
+  const mimeType = String(req.body?.mimeType || "").trim().toLowerCase();
+  const ext = IMAGE_MIME_TO_EXT[mimeType];
+  if (!ext) return res.status(400).json({ error: "Only png, jpg, webp are supported" });
+
+  const rawName = sanitizeAssetFilename(req.body?.targetFile || req.body?.fileName || "");
+  if (!rawName) return res.status(400).json({ error: "fileName is required" });
+  const finalName = rawName.toLowerCase().endsWith(ext) ? rawName : `${rawName}${ext}`;
+  const fullPath = path.join(dir, finalName);
+  if (!fullPath.startsWith(dir)) return res.status(400).json({ error: "Invalid file path" });
+
+  const buffer = decodeBase64Image(req.body?.dataBase64);
+  if (!buffer || buffer.length === 0) return res.status(400).json({ error: "Image payload is empty" });
+  if (buffer.length > MAX_UPLOAD_SIZE_BYTES) return res.status(400).json({ error: "Image is too large (max 8MB)" });
+
+  fs.writeFileSync(fullPath, buffer);
+  return res.json({ ok: true, group, file: finalName, bytes: buffer.length });
 });
 
 app.post("/auth/register", async (req, res) => {

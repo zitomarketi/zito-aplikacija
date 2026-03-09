@@ -83,6 +83,7 @@
         object-fit: cover;
         border-radius: 8px;
         border: 1px solid #ddd;
+        cursor: pointer;
       }
       .gallery-label {
         margin-top: 6px;
@@ -98,6 +99,11 @@
         display: flex;
         gap: 8px;
         margin-top: 8px;
+      }
+      .gallery-actions {
+        display: flex;
+        gap: 8px;
+        margin: 6px 0 10px 0;
       }
     </style>
   </head>
@@ -163,12 +169,19 @@
         <button onclick="loadApkGallery()">Refresh</button>
       </div>
       <h4>Тековни летоци</h4>
+      <div class="gallery-actions">
+        <button type="button" onclick="openNewUpload('letoci')">Upload new (летоци)</button>
+      </div>
       <div id="apkCurrentFlyers" class="gallery-grid"></div>
       <h4 style="margin-top: 16px">Најдобри акции</h4>
+      <div class="gallery-actions">
+        <button type="button" onclick="openNewUpload('akcii')">Upload new (акции)</button>
+      </div>
       <div id="apkBestDeals" class="gallery-grid"></div>
     </div>
 
     <pre id="out">Ready.</pre>
+    <input id="galleryFileInput" type="file" accept="image/png,image/jpeg,image/webp" style="display: none" />
 
     <script>
       const base = location.origin;
@@ -180,6 +193,8 @@
       const apkCurrentFlyers = document.getElementById("apkCurrentFlyers");
       const apkBestDeals = document.getElementById("apkBestDeals");
       const tokenInput = document.getElementById("token");
+      const galleryFileInput = document.getElementById("galleryFileInput");
+      let pendingUploadTarget = null;
 
       function adminHeaders() {
         return {
@@ -217,6 +232,21 @@
         const res = await fetch(base + path, {
           method: "POST",
           headers: adminHeaders(),
+          body: JSON.stringify(body),
+        });
+        const text = await res.text();
+        out.textContent = path + "\n" + text;
+        return res.ok;
+      }
+
+      async function callUpload(path, body) {
+        const headers = {
+          "Content-Type": "application/json",
+          "x-admin-token": tokenInput.value.trim(),
+        };
+        const res = await fetch(base + path, {
+          method: "POST",
+          headers,
           body: JSON.stringify(body),
         });
         const text = await res.text();
@@ -334,9 +364,11 @@
               .map(
                 (item) => `
             <div class="gallery-item">
-              <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.label)}" loading="lazy" />
+              <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.label)}" loading="lazy"
+                onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')" />
               <div class="gallery-label">${escapeHtml(item.label)}</div>
               <div class="gallery-file">${escapeHtml(item.file)}</div>
+              <button type="button" style="margin-top:6px" onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">Replace</button>
             </div>`,
               )
               .join("")
@@ -346,8 +378,70 @@
       async function loadApkGallery() {
         const data = await callGet("/admin/apk-gallery");
         if (!data) return;
-        renderGallery(apkCurrentFlyers, Array.isArray(data.currentFlyers) ? data.currentFlyers : []);
-        renderGallery(apkBestDeals, Array.isArray(data.bestDeals) ? data.bestDeals : []);
+        const currentFlyers = Array.isArray(data.currentFlyers) ? data.currentFlyers.map((x) => ({ ...x, group: "letoci" })) : [];
+        const bestDeals = Array.isArray(data.bestDeals) ? data.bestDeals.map((x) => ({ ...x, group: "akcii" })) : [];
+        renderGallery(apkCurrentFlyers, currentFlyers);
+        renderGallery(apkBestDeals, bestDeals);
+      }
+
+      function openReplaceUpload(group, file) {
+        pendingUploadTarget = { mode: "replace", group, file };
+        galleryFileInput.click();
+      }
+
+      function openNewUpload(group) {
+        const fileName = prompt("Enter new image file name (without extension):", "new-image");
+        if (!fileName) return;
+        pendingUploadTarget = { mode: "new", group, file: fileName.trim() };
+        galleryFileInput.click();
+      }
+
+      function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = String(reader.result || "");
+            const marker = "base64,";
+            const idx = result.indexOf(marker);
+            if (idx < 0) {
+              reject(new Error("Failed to parse file."));
+              return;
+            }
+            resolve(result.slice(idx + marker.length));
+          };
+          reader.onerror = () => reject(new Error("Failed to read file."));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function handleGalleryFilePicked(event) {
+        try {
+          const file = event?.target?.files?.[0];
+          if (!file || !pendingUploadTarget) return;
+          const mimeType = String(file.type || "").toLowerCase();
+          if (!["image/png", "image/jpeg", "image/webp"].includes(mimeType)) {
+            out.textContent = "Only PNG/JPG/WEBP files are supported.";
+            return;
+          }
+          const dataBase64 = await fileToBase64(file);
+          const targetFile =
+            pendingUploadTarget.mode === "replace"
+              ? pendingUploadTarget.file
+              : pendingUploadTarget.file || file.name;
+          const ok = await callUpload("/admin/apk-gallery/upload", {
+            group: pendingUploadTarget.group,
+            targetFile,
+            fileName: file.name,
+            mimeType,
+            dataBase64,
+          });
+          if (ok) await loadApkGallery();
+        } catch (error) {
+          out.textContent = String(error?.message || error || "Upload failed.");
+        } finally {
+          pendingUploadTarget = null;
+          galleryFileInput.value = "";
+        }
       }
 
       async function deleteFlyer(id) {
@@ -373,6 +467,7 @@
         if (savedToken) tokenInput.value = savedToken;
         tokenInput.addEventListener("change", saveToken);
         tokenInput.addEventListener("blur", saveToken);
+        galleryFileInput.addEventListener("change", handleGalleryFilePicked);
         await loadFlyers();
         await loadNotifications();
         await loadPrices();
