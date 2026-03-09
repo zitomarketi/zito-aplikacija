@@ -144,6 +144,38 @@ function createSqliteStore(filePath) {
         [safeLimit],
       );
     },
+    async listCmsAssets(groupName) {
+      return all(
+        "SELECT group_name AS groupName, file_name AS fileName, mime_type AS mimeType, updated_at AS updatedAt FROM cms_assets WHERE group_name = ? ORDER BY file_name ASC",
+        [groupName],
+      );
+    },
+    async getCmsAsset(groupName, fileName) {
+      const row = await get(
+        "SELECT group_name AS groupName, file_name AS fileName, mime_type AS mimeType, data, updated_at AS updatedAt FROM cms_assets WHERE group_name = ? AND file_name = ? LIMIT 1",
+        [groupName, fileName],
+      );
+      if (!row) return null;
+      return {
+        groupName: row.groupName,
+        fileName: row.fileName,
+        mimeType: row.mimeType,
+        data: row.data,
+        updatedAt: row.updatedAt,
+      };
+    },
+    async upsertCmsAsset(asset) {
+      await run(
+        `INSERT INTO cms_assets (group_name, file_name, mime_type, data, updated_at)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(group_name, file_name) DO UPDATE SET
+           mime_type = excluded.mime_type,
+           data = excluded.data,
+           updated_at = excluded.updated_at`,
+        [asset.groupName, asset.fileName, asset.mimeType, asset.data, asset.updatedAt],
+      );
+      return this.getCmsAsset(asset.groupName, asset.fileName);
+    },
     async addFlyer(flyer) {
       await run("INSERT INTO flyers (id, title, price, image) VALUES (?, ?, ?, ?)", [
         flyer.id,
@@ -277,6 +309,32 @@ function createPgStore(connectionString) {
         [safeLimit],
       );
       return r.rows;
+    },
+    async listCmsAssets(groupName) {
+      const r = await q(
+        "SELECT group_name AS \"groupName\", file_name AS \"fileName\", mime_type AS \"mimeType\", updated_at AS \"updatedAt\" FROM cms_assets WHERE group_name = $1 ORDER BY file_name ASC",
+        [groupName],
+      );
+      return r.rows;
+    },
+    async getCmsAsset(groupName, fileName) {
+      const r = await q(
+        "SELECT group_name AS \"groupName\", file_name AS \"fileName\", mime_type AS \"mimeType\", data, updated_at AS \"updatedAt\" FROM cms_assets WHERE group_name = $1 AND file_name = $2 LIMIT 1",
+        [groupName, fileName],
+      );
+      return r.rows[0] || null;
+    },
+    async upsertCmsAsset(asset) {
+      await q(
+        `INSERT INTO cms_assets (group_name, file_name, mime_type, data, updated_at)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (group_name, file_name) DO UPDATE SET
+           mime_type = EXCLUDED.mime_type,
+           data = EXCLUDED.data,
+           updated_at = EXCLUDED.updated_at`,
+        [asset.groupName, asset.fileName, asset.mimeType, asset.data, asset.updatedAt],
+      );
+      return this.getCmsAsset(asset.groupName, asset.fileName);
     },
     async addFlyer(flyer) {
       await q("INSERT INTO flyers (id, title, price, image) VALUES ($1, $2, $3, $4)", [

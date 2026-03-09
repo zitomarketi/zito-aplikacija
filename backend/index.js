@@ -48,6 +48,12 @@ const ASSET_URL_EXT_TO_EXT = {
   ".webp": ".webp",
   ".pdf": ".pdf",
 };
+const ASSET_EXT_TO_MIME = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".webp": "image/webp",
+  ".pdf": "application/pdf",
+};
 
 app.use(cors());
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
@@ -110,6 +116,28 @@ function listApkAssetFiles(group) {
     .readdirSync(dir)
     .filter((name) => /\.(png|jpe?g|webp|pdf)$/i.test(name))
     .sort((a, b) => a.localeCompare(b));
+}
+
+async function listApkAssets(group) {
+  const dbRows = await db.listCmsAssets(group);
+  const dbFiles = new Set(dbRows.map((row) => String(row.fileName || "")));
+  const fsRows = listApkAssetFiles(group)
+    .filter((fileName) => !dbFiles.has(fileName))
+    .map((fileName) => ({
+      groupName: group,
+      fileName,
+      mimeType: ASSET_EXT_TO_MIME[ASSET_URL_EXT_TO_EXT[path.extname(fileName).toLowerCase()] || ""] || "application/octet-stream",
+      source: "fs",
+    }));
+
+  const normalizedDbRows = dbRows.map((row) => ({
+    groupName: row.groupName,
+    fileName: row.fileName,
+    mimeType: row.mimeType,
+    source: "db",
+  }));
+
+  return [...normalizedDbRows, ...fsRows].sort((a, b) => a.fileName.localeCompare(b.fileName));
 }
 
 function sanitizeAssetFilename(name) {
@@ -320,13 +348,21 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "zito-backend", port: PORT });
 });
 
-app.get("/cms/apk-asset/:group/:file", (req, res) => {
+app.get("/cms/apk-asset/:group/:file", async (req, res) => {
   const group = String(req.params?.group || "").trim();
   const dir = APK_ASSET_GROUP_DIRS[group];
   if (!dir) return res.status(404).send("Unknown group");
 
   const file = path.basename(String(req.params?.file || ""));
   if (!file || !/\.(png|jpe?g|webp|pdf)$/i.test(file)) return res.status(400).send("Invalid file");
+
+  const dbAsset = await db.getCmsAsset(group, file);
+  if (dbAsset && dbAsset.data) {
+    const ext = ASSET_URL_EXT_TO_EXT[path.extname(file).toLowerCase()] || "";
+    const fallbackMime = ASSET_EXT_TO_MIME[ext] || "application/octet-stream";
+    res.setHeader("Content-Type", dbAsset.mimeType || fallbackMime);
+    return res.send(dbAsset.data);
+  }
 
   const fullPath = path.join(dir, file);
   if (!fullPath.startsWith(dir)) return res.status(400).send("Invalid path");
@@ -335,34 +371,36 @@ app.get("/cms/apk-asset/:group/:file", (req, res) => {
   return res.sendFile(fullPath);
 });
 
-function buildApkGalleryPayload(req) {
+async function buildApkGalleryPayload(req) {
   const mkUrl = (group, file) => `${getBackendBaseUrl(req)}/cms/apk-asset/${group}/${encodeURIComponent(file)}`;
-  const currentFlyers = listApkAssetFiles("letoci").map((file, idx) => ({
+  const currentRows = await listApkAssets("letoci");
+  const bestRows = await listApkAssets("akcii");
+  const currentFlyers = currentRows.map((row, idx) => ({
     id: `letok-${idx + 1}`,
     label: `Letok ${idx + 1}`,
-    file,
-    imageUrl: mkUrl("letoci", file),
-    isPdf: /\.pdf$/i.test(file),
+    file: row.fileName,
+    imageUrl: mkUrl("letoci", row.fileName),
+    isPdf: /\.pdf$/i.test(row.fileName),
   }));
-  const bestDeals = listApkAssetFiles("akcii").map((file, idx) => ({
+  const bestDeals = bestRows.map((row, idx) => ({
     id: `akcija-${idx + 1}`,
     label: `Akcija ${idx + 1}`,
-    file,
-    imageUrl: mkUrl("akcii", file),
-    isPdf: /\.pdf$/i.test(file),
+    file: row.fileName,
+    imageUrl: mkUrl("akcii", row.fileName),
+    isPdf: /\.pdf$/i.test(row.fileName),
   }));
   return { currentFlyers, bestDeals };
 }
 
-app.get("/cms/apk-gallery", (req, res) => {
-  return res.json(buildApkGalleryPayload(req));
+app.get("/cms/apk-gallery", async (req, res) => {
+  return res.json(await buildApkGalleryPayload(req));
 });
 
-app.get("/admin/apk-gallery", requireAdmin, (req, res) => {
-  return res.json(buildApkGalleryPayload(req));
+app.get("/admin/apk-gallery", requireAdmin, async (req, res) => {
+  return res.json(await buildApkGalleryPayload(req));
 });
 
-app.post("/admin/apk-gallery/upload", requireAdmin, (req, res) => {
+app.post("/admin/apk-gallery/upload", requireAdmin, async (req, res) => {
   const group = String(req.body?.group || "").trim();
   const dir = APK_ASSET_GROUP_DIRS[group];
   if (!dir) return res.status(400).json({ error: "Invalid group" });
@@ -382,11 +420,15 @@ app.post("/admin/apk-gallery/upload", requireAdmin, (req, res) => {
   if (!ext) return res.status(400).json({ error: "Only png, jpg, webp, pdf are supported" });
 
   const finalName = rawName.toLowerCase().endsWith(ext) ? rawName : `${rawName}${ext}`;
-  const fullPath = path.join(dir, finalName);
-  if (!fullPath.startsWith(dir)) return res.status(400).json({ error: "Invalid file path" });
-
-  fs.writeFileSync(fullPath, buffer);
-  return res.json({ ok: true, group, file: finalName, bytes: buffer.length });
+  const mimeTypeFromExt = ASSET_EXT_TO_MIME[ext] || "application/octet-stream";
+  await db.upsertCmsAsset({
+    groupName: group,
+    fileName: finalName,
+    mimeType: mimeTypeFromExt,
+    data: buffer,
+    updatedAt: new Date().toISOString(),
+  });
+  return res.json({ ok: true, group, file: finalName, bytes: buffer.length, storage: "db" });
 });
 
 app.post("/admin/apk-gallery/import-url", requireAdmin, async (req, res) => {
@@ -400,11 +442,15 @@ app.post("/admin/apk-gallery/import-url", requireAdmin, async (req, res) => {
   try {
     const { buffer, ext } = await downloadImageFromUrl(req.body?.imageUrl);
     const finalName = rawName.toLowerCase().endsWith(ext) ? rawName : `${rawName}${ext}`;
-    const fullPath = path.join(dir, finalName);
-    if (!fullPath.startsWith(dir)) return res.status(400).json({ error: "Invalid file path" });
-
-    fs.writeFileSync(fullPath, buffer);
-    return res.json({ ok: true, group, file: finalName, bytes: buffer.length, source: "url" });
+    const mimeTypeFromExt = ASSET_EXT_TO_MIME[ext] || "application/octet-stream";
+    await db.upsertCmsAsset({
+      groupName: group,
+      fileName: finalName,
+      mimeType: mimeTypeFromExt,
+      data: buffer,
+      updatedAt: new Date().toISOString(),
+    });
+    return res.json({ ok: true, group, file: finalName, bytes: buffer.length, source: "url", storage: "db" });
   } catch (error) {
     return res.status(400).json({ error: String(error?.message || error) });
   }
