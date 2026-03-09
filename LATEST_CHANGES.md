@@ -1,5 +1,22 @@
 ﻿# Latest Changes
 
+## March 9, 2026 - [Backend/CMS] Admin Visual Catalog UX simplification (Add new + Upload + Delete)
+- Updated `backend/public/admin.html` visual catalog controls:
+  - removed `Import URL` actions from both groups
+  - renamed top action to `Add new` for both `летоци` and `акции`
+  - each card now shows:
+    - `Upload` (replace with local file browser)
+    - `Delete` (remove asset)
+- Added backend delete API for gallery assets:
+  - `DELETE /admin/apk-gallery/:group/:file`
+  - deletes from DB storage and removes filesystem fallback asset when present
+- Extended DB layer (`backend/db.js`) with `deleteCmsAsset(groupName, fileName)` for:
+  - SQLite store
+  - Postgres store
+- Validation:
+  - `node --check backend/index.js` passed
+  - `node --check backend/db.js` passed
+
 ## March 5, 2026 - Login language selector on first screen
 - Added language switch buttons (flag chips) at the bottom of the Login/Register screen.
 - Supported quick language switch: Macedonian (`🇲🇰`), English (`🇬🇧`), Albanian (`🇦🇱`), Turkish (`🇹🇷`).

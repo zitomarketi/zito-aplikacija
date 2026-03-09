@@ -176,6 +176,10 @@ function createSqliteStore(filePath) {
       );
       return this.getCmsAsset(asset.groupName, asset.fileName);
     },
+    async deleteCmsAsset(groupName, fileName) {
+      const result = await run("DELETE FROM cms_assets WHERE group_name = ? AND file_name = ?", [groupName, fileName]);
+      return Number(result?.changes || 0) > 0;
+    },
     async addFlyer(flyer) {
       await run("INSERT INTO flyers (id, title, price, image) VALUES (?, ?, ?, ?)", [
         flyer.id,
@@ -335,6 +339,10 @@ function createPgStore(connectionString) {
         [asset.groupName, asset.fileName, asset.mimeType, asset.data, asset.updatedAt],
       );
       return this.getCmsAsset(asset.groupName, asset.fileName);
+    },
+    async deleteCmsAsset(groupName, fileName) {
+      const r = await q("DELETE FROM cms_assets WHERE group_name = $1 AND file_name = $2", [groupName, fileName]);
+      return Number(r.rowCount || 0) > 0;
     },
     async addFlyer(flyer) {
       await q("INSERT INTO flyers (id, title, price, image) VALUES ($1, $2, $3, $4)", [

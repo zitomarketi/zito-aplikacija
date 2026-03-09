@@ -456,6 +456,40 @@ app.post("/admin/apk-gallery/import-url", requireAdmin, async (req, res) => {
   }
 });
 
+app.delete("/admin/apk-gallery/:group/:file", requireAdmin, async (req, res) => {
+  const group = String(req.params?.group || "").trim();
+  const dir = APK_ASSET_GROUP_DIRS[group];
+  if (!dir) return res.status(400).json({ error: "Invalid group" });
+
+  const file = sanitizeAssetFilename(req.params?.file || "");
+  if (!file || !/\.(png|jpe?g|webp|pdf)$/i.test(file)) {
+    return res.status(400).json({ error: "Invalid file name" });
+  }
+
+  let dbDeleted = false;
+  let fsDeleted = false;
+  try {
+    dbDeleted = await db.deleteCmsAsset(group, file);
+  } catch (_error) {
+    dbDeleted = false;
+  }
+
+  const fullPath = path.join(dir, file);
+  if (fullPath.startsWith(dir) && fs.existsSync(fullPath)) {
+    try {
+      fs.unlinkSync(fullPath);
+      fsDeleted = true;
+    } catch (_error) {
+      fsDeleted = false;
+    }
+  }
+
+  if (!dbDeleted && !fsDeleted) {
+    return res.status(404).json({ error: "Asset not found" });
+  }
+  return res.json({ ok: true, group, file, deletedFromDb: dbDeleted, deletedFromFs: fsDeleted });
+});
+
 app.post("/auth/register", async (req, res) => {
   const { name, email, password, loyaltyCardNumber } = req.body || {};
   const normalizedName = String(name || "").trim();
