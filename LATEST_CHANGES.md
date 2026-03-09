@@ -314,3 +314,14 @@
   - oversized payload now returns structured JSON error (`413`) instead of HTML stack
 - Git delivery:
   - commits on `main`: `7314c65`, `3a8f235`, `6efade1`, `f01b825`
+
+## March 9, 2026 - [Mobile/Home] In-app PDF popup + first-page visual preview
+- Home screen (`Тековни летоци`) now consumes CMS gallery data and includes PDF flyers.
+- Added in-app PDF viewing flow (no external browser redirect):
+  - tapping a PDF flyer opens a fullscreen modal viewer inside the app.
+- Added visual PDF card preview on Home carousel:
+  - PDF cards now render embedded first-page preview in-card (instead of plain `PDF` text card).
+- Added new mobile dependency:
+  - `react-native-webview` (installed via Expo-compatible install).
+- Validation:
+  - `npx tsc --noEmit` passed.

@@ -14,6 +14,7 @@ import {
   FlatList,
   Image,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -26,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 
 type RootStackParamList = {
   Login: undefined;
@@ -1222,10 +1224,16 @@ function HomeScreen({
     [currentFlyersData],
   );
   const flyersListRef = useRef<FlatList<CurrentFlyerMock> | null>(null);
+  const [activePdfUrl, setActivePdfUrl] = useState("");
 
   const openCurrentFlyer = async (item: CurrentFlyerMock) => {
     const targetUrl = normalizeExternalFlyerUrl(item.imageUrl);
     if (!targetUrl) return;
+    const isPdf = Boolean(item.isPdf || /\.pdf($|\?)/i.test(targetUrl));
+    if (isPdf) {
+      setActivePdfUrl(targetUrl);
+      return;
+    }
     try {
       const canOpen = await Linking.canOpenURL(targetUrl);
       if (!canOpen) return;
@@ -1293,16 +1301,27 @@ function HomeScreen({
             renderItem={({ item }) => {
               const targetUrl = normalizeExternalFlyerUrl(item.imageUrl);
               const isPdf = Boolean(item.isPdf || (targetUrl && /\.pdf($|\?)/i.test(targetUrl)));
+              const pdfViewerUrl = isPdf ? buildEmbeddedPdfViewerUrl(targetUrl || "") : "";
               const imageSource = item.image ? item.image : targetUrl ? { uri: targetUrl } : null;
               return (
                 <Pressable
                   style={[styles.currentFlyerCard, { backgroundColor: palette.card, width: currentCardWidth, minHeight: currentCardHeight }]}
                   onPress={targetUrl ? () => void openCurrentFlyer(item) : undefined}
                 >
-                  {isPdf ? (
+                  {isPdf && pdfViewerUrl ? (
                     <View style={styles.currentFlyerPdfCard}>
-                      <MaterialIcons name="picture-as-pdf" size={36} color="#B31F1F" />
-                      <Text style={styles.currentFlyerPdfLabel}>PDF</Text>
+                      <WebView
+                        pointerEvents="none"
+                        source={{ uri: pdfViewerUrl }}
+                        style={styles.currentFlyerPdfWebView}
+                        scrollEnabled={false}
+                        javaScriptEnabled
+                        domStorageEnabled
+                      />
+                      <View style={styles.currentFlyerPdfBadge}>
+                        <MaterialIcons name="picture-as-pdf" size={14} color="#FFFFFF" />
+                        <Text style={styles.currentFlyerPdfBadgeText}>PDF</Text>
+                      </View>
                     </View>
                   ) : imageSource ? (
                     <Image source={imageSource} style={styles.currentFlyerImage} resizeMode="cover" />
@@ -1348,6 +1367,25 @@ function HomeScreen({
           <Text style={styles.quickListBtnText}>{t("open_shopping_list")}</Text>
         </Pressable>
       </View>
+      <Modal visible={Boolean(activePdfUrl)} animationType="slide" transparent={false} onRequestClose={() => setActivePdfUrl("")}>
+        <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}>
+          <View style={[styles.pdfModalHeader, { backgroundColor: palette.card, borderColor: palette.border }]}>
+            <Text style={[styles.pdfModalTitle, { color: palette.text }]}>Леток PDF</Text>
+            <Pressable style={styles.pdfModalCloseBtn} onPress={() => setActivePdfUrl("")}>
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </Pressable>
+          </View>
+          {activePdfUrl ? (
+            <WebView
+              source={{ uri: buildEmbeddedPdfViewerUrl(activePdfUrl) }}
+              style={styles.pdfModalWebView}
+              javaScriptEnabled
+              domStorageEnabled
+              startInLoadingState
+            />
+          ) : null}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1377,6 +1415,12 @@ function normalizeExternalFlyerUrl(value: string | undefined) {
   if (/^https?:\/\//i.test(raw)) return raw;
   if (/^www\./i.test(raw)) return `https://${raw}`;
   return "";
+}
+
+function buildEmbeddedPdfViewerUrl(pdfUrl: string) {
+  const normalized = normalizeExternalFlyerUrl(pdfUrl);
+  if (!normalized) return "";
+  return `https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(normalized)}`;
 }
 
 function FlyersScreen({ flyers, onOpenShoppingList }: { flyers: Flyer[]; onOpenShoppingList: () => void }) {
@@ -3421,11 +3465,59 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    position: "relative",
+    overflow: "hidden",
+  },
+  currentFlyerPdfWebView: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#FFFFFF",
+  },
+  currentFlyerPdfBadge: {
+    position: "absolute",
+    right: 6,
+    bottom: 6,
+    backgroundColor: "rgba(179,31,31,0.92)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  currentFlyerPdfBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
   },
   currentFlyerPdfLabel: {
     color: "#B31F1F",
     fontSize: 13,
     fontWeight: "800",
+  },
+  pdfModalHeader: {
+    height: 56,
+    borderBottomWidth: 1,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  pdfModalTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  pdfModalCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.green,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pdfModalWebView: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
   },
   mockFlyerTag: {
     color: "#D8F7E6",
