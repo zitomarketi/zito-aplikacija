@@ -33,10 +33,19 @@ const db = dbFactory();
 const oauthStateStore = new Map();
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024;
-const IMAGE_MIME_TO_EXT = {
+const ASSET_MIME_TO_EXT = {
   "image/png": ".png",
   "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
   "image/webp": ".webp",
+  "application/pdf": ".pdf",
+};
+const ASSET_URL_EXT_TO_EXT = {
+  ".png": ".png",
+  ".jpg": ".jpg",
+  ".jpeg": ".jpg",
+  ".webp": ".webp",
+  ".pdf": ".pdf",
 };
 
 app.use(cors());
@@ -98,7 +107,7 @@ function listApkAssetFiles(group) {
   if (!dir || !fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir)
-    .filter((name) => /\.(png|jpe?g|webp)$/i.test(name))
+    .filter((name) => /\.(png|jpe?g|webp|pdf)$/i.test(name))
     .sort((a, b) => a.localeCompare(b));
 }
 
@@ -116,6 +125,41 @@ function decodeBase64Image(data) {
   return Buffer.from(normalized, "base64");
 }
 
+function detectAssetExtFromBuffer(buffer) {
+  if (!buffer || buffer.length < 12) return "";
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return ".png";
+  }
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return ".jpg";
+  }
+  if (
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return ".webp";
+  }
+  if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+    return ".pdf";
+  }
+  return "";
+}
+
 async function downloadImageFromUrl(imageUrl) {
   const normalized = String(imageUrl || "").trim();
   if (!/^https?:\/\//i.test(normalized)) {
@@ -128,9 +172,13 @@ async function downloadImageFromUrl(imageUrl) {
   }
 
   const contentType = String(response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-  const ext = IMAGE_MIME_TO_EXT[contentType];
-  if (!ext) {
-    throw new Error("URL must point to a PNG, JPG or WEBP image");
+  const extFromMime = ASSET_MIME_TO_EXT[contentType] || "";
+  let extFromPath = "";
+  try {
+    const parsedUrl = new URL(normalized);
+    extFromPath = ASSET_URL_EXT_TO_EXT[path.extname(parsedUrl.pathname).toLowerCase()] || "";
+  } catch (_error) {
+    extFromPath = "";
   }
 
   const contentLength = Number(response.headers.get("content-length") || 0);
@@ -143,6 +191,13 @@ async function downloadImageFromUrl(imageUrl) {
   if (!buffer.length) throw new Error("Remote image is empty");
   if (buffer.length > MAX_UPLOAD_SIZE_BYTES) {
     throw new Error("Remote image is too large (max 8MB)");
+  }
+
+  const extFromBuffer = detectAssetExtFromBuffer(buffer);
+  const ext = extFromMime || extFromPath || extFromBuffer;
+  if (!ext) {
+    const contentTypeLabel = contentType || "unknown";
+    throw new Error(`URL must point to a PNG, JPG, WEBP or PDF file (received: ${contentTypeLabel})`);
   }
 
   return { buffer, ext };
@@ -270,7 +325,7 @@ app.get("/cms/apk-asset/:group/:file", (req, res) => {
   if (!dir) return res.status(404).send("Unknown group");
 
   const file = path.basename(String(req.params?.file || ""));
-  if (!file || !/\.(png|jpe?g|webp)$/i.test(file)) return res.status(400).send("Invalid file");
+  if (!file || !/\.(png|jpe?g|webp|pdf)$/i.test(file)) return res.status(400).send("Invalid file");
 
   const fullPath = path.join(dir, file);
   if (!fullPath.startsWith(dir)) return res.status(400).send("Invalid path");
@@ -302,8 +357,8 @@ app.post("/admin/apk-gallery/upload", requireAdmin, (req, res) => {
   if (!dir) return res.status(400).json({ error: "Invalid group" });
 
   const mimeType = String(req.body?.mimeType || "").trim().toLowerCase();
-  const ext = IMAGE_MIME_TO_EXT[mimeType];
-  if (!ext) return res.status(400).json({ error: "Only png, jpg, webp are supported" });
+  const ext = ASSET_MIME_TO_EXT[mimeType];
+  if (!ext) return res.status(400).json({ error: "Only png, jpg, webp, pdf are supported" });
 
   const rawName = sanitizeAssetFilename(req.body?.targetFile || req.body?.fileName || "");
   if (!rawName) return res.status(400).json({ error: "fileName is required" });

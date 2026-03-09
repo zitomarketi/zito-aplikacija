@@ -57,6 +57,7 @@ type Flyer = {
   id: string;
   title: string;
   price: string;
+  image?: string;
 };
 
 type Notice = {
@@ -116,7 +117,7 @@ type ThemePalette = {
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const FALLBACK_API_BASE = "https://zito-backend.onrender.com";
+const FALLBACK_API_BASE = "https://zito-cms-backend.onrender.com";
 const SESSION_TOKEN_KEY = "zito.session.token";
 const THEME_MODE_KEY = "zito.theme.mode";
 const LANGUAGE_CODE_KEY = "zito.language.code";
@@ -1312,9 +1313,30 @@ function OutlinedHeader({ text }: { text: string }) {
 function modeShadowColor(green: string) {
   return green === LIGHT_THEME.green ? "#0A5D30" : "#1E6A3A";
 }
+
+function normalizeExternalFlyerUrl(value: string | undefined) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^www\./i.test(raw)) return `https://${raw}`;
+  return "";
+}
+
 function FlyersScreen({ flyers, onOpenShoppingList }: { flyers: Flyer[]; onOpenShoppingList: () => void }) {
   const { t } = useI18n();
   const { palette } = useAppTheme();
+  const handleOpenFlyer = async (flyer: Flyer) => {
+    const targetUrl = normalizeExternalFlyerUrl(flyer.image);
+    if (!targetUrl) return;
+    try {
+      const canOpen = await Linking.canOpenURL(targetUrl);
+      if (!canOpen) return;
+      await Linking.openURL(targetUrl);
+    } catch {
+      // Ignore URL open failures.
+    }
+  };
+
   return (
     <ScreenWrap
       title={t("screen_flyers_title")}
@@ -1337,6 +1359,12 @@ function FlyersScreen({ flyers, onOpenShoppingList }: { flyers: Flyer[]; onOpenS
             <Image source={flyersImage} style={styles.flyerThumb} resizeMode="cover" />
             <Text style={styles.flyerTitle}>{item.title}</Text>
             <Text style={styles.flyerPrice}>{item.price}</Text>
+            {normalizeExternalFlyerUrl(item.image) ? (
+              <Pressable style={styles.flyerOpenBtn} onPress={() => void handleOpenFlyer(item)}>
+                <Ionicons name="open-outline" size={14} color="#FFFFFF" />
+                <Text style={styles.flyerOpenBtnText}>Open leaflet</Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
       />
@@ -3392,6 +3420,22 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 4,
     textAlign: "center",
+  },
+  flyerOpenBtn: {
+    marginTop: 8,
+    alignSelf: "center",
+    backgroundColor: colors.green,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  flyerOpenBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
   },
   priceResultCard: {
     borderRadius: 12,

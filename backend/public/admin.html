@@ -85,6 +85,19 @@
         border: 1px solid #ddd;
         cursor: pointer;
       }
+      .gallery-pdf {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        background: #f4f4f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: 700;
+        color: #a61c1c;
+      }
       .gallery-label {
         margin-top: 6px;
         font-size: 13px;
@@ -122,6 +135,7 @@
       <h3>Add Flyer</h3>
       <input id="flyerTitle" placeholder="Title" />
       <input id="flyerPrice" placeholder="Price (e.g. 89 den.)" />
+      <input id="flyerImage" placeholder="Flyer URL (optional: pdf/web/image)" />
       <button onclick="addFlyer()">Save Flyer</button>
     </div>
 
@@ -183,7 +197,7 @@
     </div>
 
     <pre id="out">Ready.</pre>
-    <input id="galleryFileInput" type="file" accept="image/png,image/jpeg,image/webp" style="display: none" />
+    <input id="galleryFileInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" style="display: none" />
 
     <script>
       const base = location.origin;
@@ -283,8 +297,14 @@
         const ok = await call("/admin/flyers", {
           title: document.getElementById("flyerTitle").value,
           price: document.getElementById("flyerPrice").value,
+          image: document.getElementById("flyerImage").value.trim(),
         });
-        if (ok) await loadFlyers();
+        if (ok) {
+          document.getElementById("flyerTitle").value = "";
+          document.getElementById("flyerPrice").value = "";
+          document.getElementById("flyerImage").value = "";
+          await loadFlyers();
+        }
       }
 
       async function addNotification() {
@@ -313,6 +333,7 @@
               <div>
                 <div><strong>${escapeHtml(x.title)}</strong> - ${escapeHtml(x.price)}</div>
                 <div class="meta">ID: ${escapeHtml(x.id)}</div>
+                ${x.image ? `<div class="meta">URL: <a href="${escapeHtml(x.image)}" target="_blank" rel="noopener noreferrer">${escapeHtml(x.image)}</a></div>` : ""}
               </div>
               <button class="btn-danger" onclick="deleteFlyer('${escapeHtml(x.id)}')">Delete</button>
             </div>`,
@@ -364,15 +385,26 @@
         target.innerHTML = items.length
           ? items
               .map(
-                (item) => `
+                (item) => {
+                  const lowerFile = String(item.file || "").toLowerCase();
+                  const isPdf = lowerFile.endsWith(".pdf");
+                  const preview = isPdf
+                    ? `<div class="gallery-pdf">PDF</div>`
+                    : `<img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.label)}" loading="lazy"
+                        onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')" />`;
+                  const openPdfBtn = isPdf
+                    ? `<button type="button" style="margin-top:6px" onclick="window.open('${escapeHtml(item.imageUrl)}','_blank','noopener,noreferrer')">Open PDF</button>`
+                    : "";
+                  return `
             <div class="gallery-item">
-              <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.label)}" loading="lazy"
-                onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')" />
+              ${preview}
               <div class="gallery-label">${escapeHtml(item.label)}</div>
               <div class="gallery-file">${escapeHtml(item.file)}</div>
+              ${openPdfBtn}
               <button type="button" style="margin-top:6px" onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">Replace</button>
               <button type="button" style="margin-top:6px" onclick="openReplaceFromUrl('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">Replace URL</button>
-            </div>`,
+            </div>`;
+                },
               )
               .join("")
           : "<div class='meta'>No images found</div>";
@@ -393,7 +425,7 @@
       }
 
       function openNewUpload(group) {
-        const fileName = prompt("Enter new image file name (without extension):", "new-image");
+        const fileName = prompt("Enter new file name (without extension). Supported: png/jpg/webp/pdf", "new-file");
         if (!fileName) return;
         pendingUploadTarget = { mode: "new", group, file: fileName.trim() };
         galleryFileInput.click();
@@ -410,7 +442,7 @@
       }
 
       async function openNewUrlImport(group) {
-        const imageUrl = prompt("Paste direct image URL (png/jpg/webp):", "");
+        const imageUrl = prompt("Paste direct file URL (png/jpg/webp/pdf):", "");
         if (!imageUrl) return;
         const fileName = prompt("Enter file name (without extension):", "new-image");
         if (!fileName) return;
@@ -418,7 +450,7 @@
       }
 
       async function openReplaceFromUrl(group, file) {
-        const imageUrl = prompt("Paste new direct image URL for replace:", "");
+        const imageUrl = prompt("Paste new direct file URL for replace (png/jpg/webp/pdf):", "");
         if (!imageUrl) return;
         await importImageFromUrl(group, file, imageUrl.trim());
       }
@@ -446,8 +478,8 @@
           const file = event?.target?.files?.[0];
           if (!file || !pendingUploadTarget) return;
           const mimeType = String(file.type || "").toLowerCase();
-          if (!["image/png", "image/jpeg", "image/webp"].includes(mimeType)) {
-            out.textContent = "Only PNG/JPG/WEBP files are supported.";
+          if (!["image/png", "image/jpeg", "image/webp", "application/pdf"].includes(mimeType)) {
+            out.textContent = "Only PNG/JPG/WEBP/PDF files are supported.";
             return;
           }
           const dataBase64 = await fileToBase64(file);
