@@ -1472,15 +1472,15 @@ function HomeScreen({
 }
 
 function OutlinedHeader({ text }: { text: string }) {
-  const { mode } = useAppTheme();
+  const { palette } = useAppTheme();
   return (
     <View style={[styles.outlinedTitleWrap, { borderBottomColor: colors.green }]}>
       <Text
         style={[
           styles.showcaseHeaderMain,
           {
-            color: getHeadlineColor(mode),
-            textShadowColor: getHeadlineOutlineColor(mode),
+            color: getHeadlineColorByPalette(palette),
+            textShadowColor: getHeadlineOutlineColorByPalette(palette),
             textShadowOffset: { width: 0, height: 0 },
             textShadowRadius: HEADLINE_OUTLINE_RADIUS,
           },
@@ -1496,12 +1496,16 @@ function modeShadowColor(green: string) {
   return green === LIGHT_THEME.green ? "#0A5D30" : "#1E6A3A";
 }
 
-function getHeadlineColor(mode: ThemeMode) {
-  return mode === "dark" ? DARK_HEADLINE_COLOR : HEADLINE_COLOR;
+function isDarkPalette(palette: ThemePalette) {
+  return palette.bg === DARK_THEME.bg || palette.text === DARK_THEME.text;
 }
 
-function getHeadlineOutlineColor(mode: ThemeMode) {
-  return mode === "dark" ? "transparent" : HEADLINE_OUTLINE_COLOR;
+function getHeadlineColorByPalette(palette: ThemePalette) {
+  return isDarkPalette(palette) ? DARK_HEADLINE_COLOR : HEADLINE_COLOR;
+}
+
+function getHeadlineOutlineColorByPalette(palette: ThemePalette) {
+  return isDarkPalette(palette) ? "transparent" : HEADLINE_OUTLINE_COLOR;
 }
 
 function normalizeExternalFlyerUrl(value: string | undefined) {
@@ -1554,7 +1558,7 @@ function FlyersScreen({ flyers, onOpenShoppingList }: { flyers: Flyer[]; onOpenS
     <ScreenWrap
       title={t("screen_flyers_title")}
       subtitle={t("screen_flyers_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColor(mode), textShadowColor: getHeadlineOutlineColor(mode), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <Pressable style={[styles.quickListBtn, { backgroundColor: palette.card, borderColor: palette.border }]} onPress={onOpenShoppingList}>
@@ -1651,7 +1655,7 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
     <ScreenWrap
       title={t("screen_card_title")}
       subtitle={t("screen_card_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColor(mode), textShadowColor: getHeadlineOutlineColor(mode), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <Pressable style={[styles.scanBtn, { backgroundColor: palette.card, borderColor: palette.green }]} onPress={() => void handleOpenScanner()}>
@@ -1757,7 +1761,7 @@ function PriceCheckScreen({
     <ScreenWrap
       title={t("screen_prices_title")}
       subtitle={t("screen_prices_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColor(mode), textShadowColor: getHeadlineOutlineColor(mode), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <Pressable style={[styles.scanBtn, { backgroundColor: palette.card, borderColor: palette.green }]} onPress={() => void handleOpenScanner()}>
@@ -1833,7 +1837,7 @@ function ShoppingListScreen({
     <ScreenWrap
       title={t("screen_shopping_title")}
       subtitle={t("screen_shopping_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColor(mode), textShadowColor: getHeadlineOutlineColor(mode), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <View style={[styles.shoppingForm, { backgroundColor: palette.card, borderColor: palette.border }]}>
@@ -1921,7 +1925,7 @@ function NotificationsScreen({ notices }: { notices: Notice[] }) {
     <ScreenWrap
       title={t("screen_notifications_title")}
       subtitle={t("screen_notifications_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColor(mode), textShadowColor: getHeadlineOutlineColor(mode), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       {notices.map((notice) => (
@@ -2041,7 +2045,7 @@ function LocationsScreen() {
     <ScreenWrap
       title={t("screen_locations_title")}
       subtitle={t("screen_locations_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColor(mode), textShadowColor: getHeadlineOutlineColor(mode), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <TextInput
@@ -2171,7 +2175,7 @@ function ProfileScreen({
     <ScreenWrap
       title={t("screen_profile_title")}
       subtitle={t("screen_profile_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColor(mode), textShadowColor: getHeadlineOutlineColor(mode), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <InfoCard title={t("name_label")} value={user.name} />
@@ -2294,7 +2298,7 @@ function MoreScreen({
     <ScreenWrap
       title=""
       subtitle={t("screen_more_subtitle")}
-      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColor(mode), textShadowColor: getHeadlineOutlineColor(mode), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
       subtitleStyle={styles.flyersScreenSubtitle}
     >
       <Pressable style={[styles.loginBtn, { marginTop: 0 }]} onPress={onOpenCard}>
