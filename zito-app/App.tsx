@@ -1698,7 +1698,7 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
           <Image source={cardBackImage} style={styles.cardBackImage} resizeMode="contain" />
           <View style={styles.cardBackBarcodeWrap}>
             <BarcodeStrip value={card.barcode} height={34} />
-            <Text style={[styles.cardBackBarcodeDigits, { color: palette.text }]}>{card.barcode}</Text>
+            <Text style={styles.cardBackBarcodeDigits}>{card.barcode}</Text>
           </View>
         </View>
       </View>
@@ -4007,6 +4007,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.6,
+    color: "#111111",
   },
   cardNumber: {
     textAlign: "center",
