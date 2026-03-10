@@ -831,7 +831,6 @@ const logoImage = require("./assets/images/logo.png");
 const tiltedBadgeImage = require("./assets/images/sekogasverninavas_upscaled-removebg-preview.png");
 const bannerImage = require("./assets/images/home_banner.png");
 const flyersImage = require("./assets/images/flyers_grid.png");
-const cardFrontImage = require("./assets/kartickapredna.png");
 const cardBackImage = require("./assets/kartickazadna.png");
 // Location data refresh marker: 2026-03-06T12:05
 const rawMarketLocations = require("./assets/market_locations.json") as MarketLocation[];
@@ -1601,6 +1600,11 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanLocked, setScanLocked] = useState(false);
   const [scanStatus, setScanStatus] = useState("");
+  const [manualCardInput, setManualCardInput] = useState(card.cardNumber);
+
+  useEffect(() => {
+    setManualCardInput(card.cardNumber);
+  }, [card.cardNumber]);
 
   const handleOpenScanner = async () => {
     setScanStatus("");
@@ -1630,6 +1634,17 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
     const result = await onScanCard(scannedCardNumber);
     setScanStatus(result);
     setScanLocked(false);
+  };
+
+  const handleManualCardSave = async () => {
+    const digits = manualCardInput.replace(/\D/g, "").slice(0, 16);
+    if (!digits) {
+      setScanStatus(t("state_card_invalid"));
+      return;
+    }
+    setManualCardInput(digits);
+    const result = await onScanCard(digits);
+    setScanStatus(result);
   };
 
   if (isScannerOpen) {
@@ -1667,15 +1682,24 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
         <Ionicons name="scan-outline" size={18} color={colors.green} />
         <Text style={styles.scanBtnText}>{t("scan_barcode_camera")}</Text>
       </Pressable>
+      <TextInput
+        value={manualCardInput}
+        onChangeText={setManualCardInput}
+        placeholder={t("loyalty_placeholder")}
+        keyboardType="number-pad"
+        style={[styles.input, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
+      />
+      <Pressable style={[styles.primaryBtn, { marginBottom: 10 }]} onPress={() => void handleManualCardSave()}>
+        <Text style={styles.primaryBtnText}>{t("save_profile")}</Text>
+      </Pressable>
       {scanStatus ? <Text style={[styles.scanStatusText, { color: palette.muted }]}>{scanStatus}</Text> : null}
       <View style={[styles.cardBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
-        <Image source={cardFrontImage} style={styles.cardPreviewImage} resizeMode="contain" />
-        <Image source={cardBackImage} style={styles.cardPreviewImage} resizeMode="contain" />
-        <Image source={logoImage} style={styles.cardLogo} resizeMode="contain" />
-        <Text style={[styles.cardNumber, { color: palette.muted }]}>{card.cardNumber}</Text>
-        <View style={[styles.barcodeWrap, { backgroundColor: palette.inputBg, borderColor: palette.border }]}>
-          <BarcodeStrip value={card.barcode} height={86} />
-          <Text style={[styles.barcodeDigits, { color: palette.text }]}>{card.barcode}</Text>
+        <View style={styles.cardBackWrap}>
+          <Image source={cardBackImage} style={styles.cardBackImage} resizeMode="contain" />
+          <View style={styles.cardBackBarcodeWrap}>
+            <BarcodeStrip value={card.barcode} height={34} />
+            <Text style={[styles.cardBackBarcodeDigits, { color: palette.text }]}>{card.barcode}</Text>
+          </View>
         </View>
       </View>
     </ScreenWrap>
@@ -3957,6 +3981,32 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 10,
     borderRadius: 12,
+  },
+  cardBackWrap: {
+    width: "100%",
+    alignSelf: "center",
+    aspectRatio: 700 / 452,
+    position: "relative",
+  },
+  cardBackImage: {
+    width: "100%",
+    height: "100%",
+  },
+  cardBackBarcodeWrap: {
+    position: "absolute",
+    left: "24.1%",
+    top: "40.9%",
+    width: "48%",
+    height: "19.5%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  cardBackBarcodeDigits: {
+    marginTop: 2,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
   },
   cardNumber: {
     textAlign: "center",
