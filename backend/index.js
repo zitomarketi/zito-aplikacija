@@ -32,6 +32,8 @@ const PRICE_REFRESH_HOUR_LOCAL = Number(process.env.PRICE_REFRESH_HOUR_LOCAL || 
 const PRICE_REFRESH_TIMEZONE = String(process.env.PRICE_REFRESH_TIMEZONE || "Europe/Skopje").trim() || "Europe/Skopje";
 const LOYALTY_SOAP_URL = String(process.env.LOYALTY_SOAP_URL || "").trim();
 const LOYALTY_SOAP_STRICT_VERIFY = String(process.env.LOYALTY_SOAP_STRICT_VERIFY || "false").trim().toLowerCase() === "true";
+const LOYALTY_VERIFY_USERNAME_TEMPLATE = String(process.env.LOYALTY_VERIFY_USERNAME_TEMPLATE || "{CARD}").trim();
+const LOYALTY_VERIFY_PASSWORD_TEMPLATE = String(process.env.LOYALTY_VERIFY_PASSWORD_TEMPLATE || "{CARD}").trim();
 const APK_ASSET_GROUP_DIRS = {
   letoci: path.resolve(__dirname, "..", "zito-app", "assets", "images", "letoci"),
   akcii: path.resolve(__dirname, "..", "zito-app", "assets", "images", "akcii"),
@@ -215,13 +217,14 @@ function shouldRejectOnLoyaltyServiceError() {
   return LOYALTY_SOAP_STRICT_VERIFY;
 }
 
-function escapeXml(input) {
-  return String(input || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+function resolveLoyaltyTemplate(template, cardNumber) {
+  return String(template || "")
+    .replace(/\{CARD\}/gi, String(cardNumber || "").trim())
+    .trim();
+}
+
+function loyaltyBaseUrl() {
+  return String(LOYALTY_SOAP_URL || "").replace(/\?.*$/, "").replace(/\/+$/, "");
 }
 
 function decodeXmlEntities(input) {
@@ -239,7 +242,23 @@ function extractTagValue(xml, tag) {
 }
 
 function parseLoyaltyPurchases(xmlText) {
-  const decoded = decodeXmlEntities(xmlText);
+  const decoded = decodeXmlEntities(xmlText).trim();
+  if (decoded.startsWith("[") || decoded.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(decoded);
+      const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.items) ? parsed.items : [];
+      return rows.map((row) => ({
+        brKasa: String(row?.BrKasa ?? row?.brKasa ?? ""),
+        brojSka: String(row?.Broj_Ska ?? row?.brojSka ?? ""),
+        datumSka: String(row?.Datum_Ska ?? row?.datumSka ?? ""),
+        imeArt: String(row?.ImeArt ?? row?.imeArt ?? ""),
+        kolicina: String(row?.Kolicina ?? row?.kolicina ?? ""),
+        vrednost: String(row?.Vrednost ?? row?.vrednost ?? ""),
+      }));
+    } catch (_error) {
+      // Continue with XML parsing.
+    }
+  }
   const list = [];
   const blocks = decoded.match(/<LicnaSmetka>[\s\S]*?<\/LicnaSmetka>/gi) || [];
   for (const block of blocks) {
@@ -259,47 +278,73 @@ async function callLoyaltySoap(methodName, barkod) {
   if (!hasLoyaltySoapConfigured()) {
     return { ok: false, error: "LOYALTY_SOAP_URL is not configured", raw: "" };
   }
-  const envelope = `<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
-  <soapenv:Body>
-    <tem:${methodName}>
-      <tem:barkod>${escapeXml(barkod)}</tem:barkod>
-    </tem:${methodName}>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+  const base = loyaltyBaseUrl();
+  const value = String(barkod || "").trim();
+  const username = encodeURIComponent(resolveLoyaltyTemplate(LOYALTY_VERIFY_USERNAME_TEMPLATE, value));
+  const password = encodeURIComponent(resolveLoyaltyTemplate(LOYALTY_VERIFY_PASSWORD_TEMPLATE, value));
+  const encoded = encodeURIComponent(value);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
-  try {
-    const response = await fetch(LOYALTY_SOAP_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/xml; charset=utf-8",
-        SOAPAction: `"http://tempuri.org/${methodName}"`,
-      },
-      body: envelope,
-      signal: controller.signal,
-    });
-    const raw = await response.text();
-    if (!response.ok) return { ok: false, error: `SOAP HTTP ${response.status}`, raw };
-    return { ok: true, error: "", raw };
-  } catch (error) {
-    return { ok: false, error: String(error?.message || error), raw: "" };
-  } finally {
-    clearTimeout(timeout);
+  const candidates = [];
+  if (methodName === "ProverkaKorisnik") {
+    candidates.push(`${base}/ProverkaKorisnik?Username=${username}&Password=${password}`);
+    candidates.push(`${base}/ProverkaKorisnik?barkod=${encoded}`);
+  } else if (methodName === "ZemiLicnaSmetka") {
+    candidates.push(`${base}/ZemiLicnaSmetka?Sifra_Kor=${encoded}`);
+    candidates.push(`${base}/ZemiLicnaSmetka?barkod=${encoded}`);
+  } else if (methodName === "ZemiPoeniZaBarkod") {
+    candidates.push(`${base}/ZemiPoeniZaBarkod?Sifra_Kor=${encoded}`);
+    candidates.push(`${base}/ZemiPoeniZaBarkod?barkod=${encoded}`);
+  } else {
+    candidates.push(`${base}/${encodeURIComponent(methodName)}?barkod=${encoded}`);
   }
+
+  let lastError = "No loyalty endpoint candidates";
+  for (const url of candidates) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "application/json, text/plain, text/xml, */*" },
+        signal: controller.signal,
+      });
+      const raw = await response.text();
+      if (response.ok) return { ok: true, error: "", raw };
+      lastError = `HTTP ${response.status}`;
+    } catch (error) {
+      lastError = String(error?.message || error);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  return { ok: false, error: lastError, raw: "" };
 }
 
 function parseLoyaltyVerify(rawSoap) {
-  const decoded = decodeXmlEntities(rawSoap);
+  const decoded = decodeXmlEntities(rawSoap).trim();
   const resultMatch = decoded.match(/<\w*:?(?:ProverkaKorisnikResult|ProverkaKorisnikResponseResult|string)[^>]*>([\s\S]*?)<\/\w*:?(?:ProverkaKorisnikResult|ProverkaKorisnikResponseResult|string)>/i);
-  const value = (resultMatch ? resultMatch[1] : decoded).toLowerCase().trim();
+  let value = (resultMatch ? resultMatch[1] : decoded).trim();
+  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    value = value.slice(1, -1);
+  }
+  value = value.toLowerCase();
   if (!value) return false;
   return value.includes("true") || value === "1" || value.includes("valid") || value.includes("ok");
 }
 
 function parseLoyaltyPoints(rawSoap) {
-  const decoded = decodeXmlEntities(rawSoap);
+  const decoded = decodeXmlEntities(rawSoap).trim();
+  if (decoded.startsWith("{") || decoded.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(decoded);
+      const source = Array.isArray(parsed) ? parsed[0] : parsed;
+      const pointValue = source?.NoviPoeni ?? source?.Poeni_Tekoven_Mesec ?? source?.StariPoeni ?? source?.points ?? 0;
+      const numeric = Number(String(pointValue).replace(",", "."));
+      return Number.isFinite(numeric) ? numeric : 0;
+    } catch (_error) {
+      // Continue with XML/plain parsing.
+    }
+  }
   const resultMatch = decoded.match(/<\w*:?(?:ZemiPoeniZaBarkodResult|string)[^>]*>([\s\S]*?)<\/\w*:?(?:ZemiPoeniZaBarkodResult|string)>/i);
   const value = resultMatch ? decodeXmlEntities(resultMatch[1]) : decoded;
   const numberMatch = String(value).match(/-?\d+(?:[.,]\d+)?/);
@@ -961,7 +1006,7 @@ app.post("/auth/register", async (req, res) => {
         if (shouldRejectOnLoyaltyServiceError()) {
           return res.status(502).json({ error: `Loyalty service unavailable: ${verifyResult.error}` });
         }
-      } else if (!parseLoyaltyVerify(verifyResult.raw)) {
+      } else if (!parseLoyaltyVerify(verifyResult.raw) && shouldRejectOnLoyaltyServiceError()) {
         return res.status(400).json({ error: "Invalid loyalty card number" });
       }
     }
@@ -1169,7 +1214,7 @@ app.post("/me/card", requireAuth, async (req, res) => {
         if (shouldRejectOnLoyaltyServiceError()) {
           return res.status(502).json({ error: `Loyalty service unavailable: ${verifyResult.error}` });
         }
-      } else if (!parseLoyaltyVerify(verifyResult.raw)) {
+      } else if (!parseLoyaltyVerify(verifyResult.raw) && shouldRejectOnLoyaltyServiceError()) {
         return res.status(400).json({ error: "Invalid loyalty card number" });
       }
     }
