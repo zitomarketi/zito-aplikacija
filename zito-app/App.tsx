@@ -1739,7 +1739,7 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
 function PriceCheckScreen({
   onCheckPrice,
 }: {
-  onCheckPrice: (barcode: string) => Promise<{ product: ProductPrice | null; error: string | null }>;
+  onCheckPrice: (query: string) => Promise<{ product: ProductPrice | null; error: string | null }>;
 }) {
   const { palette, mode } = useAppTheme();
   const { t } = useI18n();
@@ -1750,14 +1750,14 @@ function PriceCheckScreen({
   const [status, setStatus] = useState("");
   const [product, setProduct] = useState<ProductPrice | null>(null);
 
-  const lookup = async (rawBarcode: string) => {
-    const barcode = rawBarcode.replace(/\D/g, "");
-    if (barcode.length < 6) {
+  const lookup = async (rawQuery: string) => {
+    const query = rawQuery.trim();
+    if (query.length < 2) {
       setStatus(t("price_invalid"));
       setProduct(null);
       return;
     }
-    const result = await onCheckPrice(barcode);
+    const result = await onCheckPrice(query);
     if (result.error) {
       setStatus(result.error);
       setProduct(null);
@@ -1832,11 +1832,11 @@ function PriceCheckScreen({
 
       <TextInput
         value={barcodeInput}
-        onChangeText={(text) => setBarcodeInput(text.replace(/\D/g, ""))}
+        onChangeText={setBarcodeInput}
         placeholder={t("price_input_placeholder")}
         placeholderTextColor="#9A9A9A"
         style={[styles.input, { backgroundColor: palette.inputBg, borderColor: palette.border, color: palette.text }]}
-        keyboardType="number-pad"
+        keyboardType="default"
       />
       <Pressable style={[styles.loginBtn, { marginTop: 0 }]} onPress={() => void lookup(barcodeInput)}>
         <Ionicons name="pricetag-outline" size={20} color={colors.green} />
@@ -2540,7 +2540,7 @@ function MainTabs({
   onClearPurchasedShoppingItems: () => void;
   onSetLanguage: (language: LanguageCode) => void;
   onScanCard: (cardNumber: string) => Promise<string>;
-  onCheckPrice: (barcode: string) => Promise<{ product: ProductPrice | null; error: string | null }>;
+  onCheckPrice: (query: string) => Promise<{ product: ProductPrice | null; error: string | null }>;
   onUpdateProfile: (name: string, email: string) => void;
   onChangePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => void;
   onRegisterPush: () => void;
@@ -3112,15 +3112,15 @@ export default function App() {
     }
   };
 
-  const handleCheckPrice = async (barcode: string): Promise<{ product: ProductPrice | null; error: string | null }> => {
+  const handleCheckPrice = async (query: string): Promise<{ product: ProductPrice | null; error: string | null }> => {
     if (!authToken) return { product: null, error: t("price_lookup_error") };
     try {
-      const product = await apiPost<ProductPrice>(apiBase, "/price/check", { barcode }, authToken);
+      const product = await apiPost<ProductPrice>(apiBase, "/price/check", { query }, authToken);
       return { product, error: null };
     } catch (error) {
       const apiError = extractApiErrorMessage(error).toLowerCase();
       if (apiError.includes("not found")) return { product: null, error: t("price_not_found") };
-      if (apiError.includes("invalid barcode")) return { product: null, error: t("price_invalid") };
+      if (apiError.includes("invalid")) return { product: null, error: t("price_invalid") };
       return { product: null, error: t("price_lookup_error") };
     }
   };

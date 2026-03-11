@@ -115,6 +115,50 @@ function isValidBarcode(barcode) {
   return /^\d{6,32}$/.test(barcode);
 }
 
+function normalizePriceQuery(input) {
+  return String(input || "").trim().slice(0, 120);
+}
+
+function normalizeSearchText(input) {
+  return String(input || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function toMacedonianCyrillic(input) {
+  const source = String(input || "").trim();
+  if (!source) return "";
+  const digraphs = [
+    [/DZH/g, "Џ"], [/Dzh/g, "Џ"], [/dzh/g, "џ"],
+    [/LJ/g, "Љ"], [/Lj/g, "Љ"], [/lj/g, "љ"],
+    [/NJ/g, "Њ"], [/Nj/g, "Њ"], [/nj/g, "њ"],
+    [/GJ/g, "Ѓ"], [/Gj/g, "Ѓ"], [/gj/g, "ѓ"],
+    [/KJ/g, "Ќ"], [/Kj/g, "Ќ"], [/kj/g, "ќ"],
+    [/ZH/g, "Ж"], [/Zh/g, "Ж"], [/zh/g, "ж"],
+    [/SH/g, "Ш"], [/Sh/g, "Ш"], [/sh/g, "ш"],
+    [/CH/g, "Ч"], [/Ch/g, "Ч"], [/ch/g, "ч"],
+    [/DZ/g, "Ѕ"], [/Dz/g, "Ѕ"], [/dz/g, "ѕ"],
+  ];
+  let output = source;
+  for (const [pattern, letter] of digraphs) {
+    output = output.replace(pattern, letter);
+  }
+  const charMap = {
+    A: "А", a: "а", B: "Б", b: "б", C: "Ц", c: "ц", D: "Д", d: "д", E: "Е", e: "е",
+    F: "Ф", f: "ф", G: "Г", g: "г", H: "Х", h: "х", I: "И", i: "и", J: "Ј", j: "ј",
+    K: "К", k: "к", L: "Л", l: "л", M: "М", m: "м", N: "Н", n: "н", O: "О", o: "о",
+    P: "П", p: "п", Q: "Ќ", q: "ќ", R: "Р", r: "р", S: "С", s: "с", T: "Т", t: "т",
+    U: "У", u: "у", V: "В", v: "в", W: "В", w: "в", X: "Кс", x: "кс", Y: "Ј", y: "ј",
+    Z: "З", z: "з",
+  };
+  return output
+    .split("")
+    .map((ch) => charMap[ch] || ch)
+    .join("");
+}
+
 function asNumberValue(input) {
   if (typeof input === "number" && Number.isFinite(input)) return input;
   if (typeof input === "string") {
@@ -125,7 +169,7 @@ function asNumberValue(input) {
   return null;
 }
 
-function normalizeExternalPriceItem(item, barcode) {
+function normalizeExternalPriceItem(item, query, queryBarcode) {
   if (!item || typeof item !== "object") return null;
   const nestedBarcodes = [];
   if (Array.isArray(item.barcodes)) {
@@ -146,6 +190,8 @@ function normalizeExternalPriceItem(item, barcode) {
     item.Barkod,
     item.glavenBarcode,
     item.GlavenBarcode,
+    item.sifraArt,
+    item.SifraArt,
     item.sifra,
     item.Sifra,
     item.code,
@@ -154,11 +200,17 @@ function normalizeExternalPriceItem(item, barcode) {
   ]
     .map((x) => normalizeBarcode(x))
     .filter(Boolean);
-  if (barcodeCandidates.length > 0 && !barcodeCandidates.includes(barcode)) return null;
+  const itemName = String(item.name || item.naziv || item.artikl || item.imeArt || item.Naziv || item.Artikl || item.ImeArt || "").trim();
+  const itemSifra = String(item.sifraArt || item.sifra || item.SifraArt || item.Sifra || "").trim();
+  const queryText = normalizeSearchText(query);
+  const nameText = normalizeSearchText(itemName);
+  const sifraText = normalizeSearchText(itemSifra);
+  const matchesBarcode = Boolean(queryBarcode && barcodeCandidates.includes(queryBarcode));
+  const matchesName = Boolean(queryText && nameText.includes(queryText));
+  const matchesSifra = Boolean(queryText && sifraText.includes(queryText));
+  if (!matchesBarcode && !matchesName && !matchesSifra) return null;
 
-  const name =
-    String(item.name || item.naziv || item.artikl || item.imeArt || item.Naziv || item.Artikl || item.ImeArt || "")
-      .trim() || `Proizvod ${barcode}`;
+  const name = toMacedonianCyrillic(itemName || `Proizvod ${queryBarcode || queryText || "artikal"}`);
   const priceNumber =
     asNumberValue(item.price) ??
     asNumberValue(item.cena) ??
@@ -170,8 +222,9 @@ function normalizeExternalPriceItem(item, barcode) {
   if (priceNumber === null) return null;
   const unit = String(item.unit || item.ed || item.edm || item.Unit || item.ED || "").trim();
   const updatedAt = String(item.updatedAt || item.datum || item.date || item.UpdatedAt || "").trim();
+  const resolvedBarcode = queryBarcode || barcodeCandidates[0] || "";
   return {
-    barcode,
+    barcode: resolvedBarcode,
     name,
     price: String(priceNumber),
     currency: "MKD",
@@ -190,13 +243,16 @@ function extractArrayPayload(payload) {
   return [];
 }
 
-async function fetchExternalPrice(barcode) {
+async function fetchExternalPrice(query) {
   if (!EXTERNAL_PRICES_API_BASE) return null;
+  const queryText = normalizePriceQuery(query);
+  const queryBarcode = normalizeBarcode(queryText);
+  if (!queryText) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Math.max(1000, EXTERNAL_PRICES_TIMEOUT_MS));
   try {
     const baseUrl = `${EXTERNAL_PRICES_API_BASE}${EXTERNAL_PRICES_API_PATH.startsWith("/") ? "" : "/"}${EXTERNAL_PRICES_API_PATH}`;
-    const urlWithBarcode = `${baseUrl}?${new URLSearchParams({ barcode }).toString()}`;
+    const urlWithBarcode = `${baseUrl}?${new URLSearchParams({ barcode: queryBarcode || queryText }).toString()}`;
 
     let response = await fetch(urlWithBarcode, {
       method: "GET",
@@ -217,7 +273,7 @@ async function fetchExternalPrice(barcode) {
     const payload = await response.json();
     const rows = extractArrayPayload(payload);
     for (const row of rows) {
-      const mapped = normalizeExternalPriceItem(row, barcode);
+      const mapped = normalizeExternalPriceItem(row, queryText, queryBarcode);
       if (mapped) return mapped;
     }
     return null;
@@ -986,17 +1042,20 @@ app.get("/flyers", requireAuth, (_req, res) => {
 });
 
 app.post("/price/check", requireAuth, async (req, res) => {
-  const barcode = normalizeBarcode(req.body?.barcode);
-  if (!isValidBarcode(barcode)) {
-    return res.status(400).json({ error: "Invalid barcode format" });
+  const query = normalizePriceQuery(req.body?.query || req.body?.barcode);
+  const barcode = normalizeBarcode(query);
+  if (!query || (barcode && !isValidBarcode(barcode) && query === barcode)) {
+    return res.status(400).json({ error: "Invalid barcode or query format" });
   }
   try {
-    const externalPrice = await fetchExternalPrice(barcode);
+    const externalPrice = await fetchExternalPrice(query);
     if (externalPrice) return res.json(externalPrice);
 
-    const price = await db.getProductPriceByBarcode(barcode);
-    if (!price) return res.status(404).json({ error: "Product not found" });
-    return res.json(price);
+    if (barcode) {
+      const price = await db.getProductPriceByBarcode(barcode);
+      if (price) return res.json(price);
+    }
+    return res.status(404).json({ error: "Product not found" });
   } catch (error) {
     return res.status(500).json({ error: String(error) });
   }
