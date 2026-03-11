@@ -1048,13 +1048,31 @@ app.post("/price/check", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Invalid barcode or query format" });
   }
   try {
-    const externalPrice = await fetchExternalPrice(query);
-    if (externalPrice) return res.json(externalPrice);
-
     if (barcode) {
-      const price = await db.getProductPriceByBarcode(barcode);
-      if (price) return res.json(price);
+      const localPrice = await db.getProductPriceByBarcode(barcode);
+      if (localPrice) return res.json(localPrice);
     }
+
+    const externalPrice = await fetchExternalPrice(query);
+    if (externalPrice) {
+      try {
+        const persistBarcode = normalizeBarcode(externalPrice.barcode || barcode);
+        if (persistBarcode && isValidBarcode(persistBarcode)) {
+          await db.upsertProductPrice({
+            barcode: persistBarcode,
+            name: externalPrice.name,
+            price: externalPrice.price,
+            currency: externalPrice.currency || "MKD",
+            unit: externalPrice.unit || "",
+            updatedAt: externalPrice.updatedAt || new Date().toISOString(),
+          });
+        }
+      } catch (_error) {
+        // Ignore cache write failures and still return external result.
+      }
+      return res.json(externalPrice);
+    }
+
     return res.status(404).json({ error: "Product not found" });
   } catch (error) {
     return res.status(500).json({ error: String(error) });
