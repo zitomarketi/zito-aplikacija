@@ -88,6 +88,15 @@ type ProductPrice = {
   updatedAt: string;
 };
 
+type PurchaseItem = {
+  brKasa: string;
+  brojSka: string;
+  datumSka: string;
+  imeArt: string;
+  kolicina: string;
+  vrednost: string;
+};
+
 type ApkGalleryItem = {
   id: string;
   label: string;
@@ -283,6 +292,10 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     state_card_invalid: "Невалиден број на картичка.",
     state_card_linked: "Оваа картичка е веќе поврзана со друг профил.",
     state_card_error: "Грешка при ажурирање на картичка.",
+    card_points_title: "Поени",
+    card_purchases_title: "Купени продукти",
+    card_purchases_empty: "Нема пазарувања за приказ.",
+    card_loading: "Се вчитува...",
     home_current_flyers: "ТЕКОВНИ ЛЕТОЦИ",
     home_best_deals: "НАЈДОБРИ АКЦИИ",
     points: "Поени",
@@ -419,6 +432,10 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     state_card_invalid: "Invalid loyalty card number.",
     state_card_linked: "This card is already linked to another profile.",
     state_card_error: "Could not update card.",
+    card_points_title: "Points",
+    card_purchases_title: "Purchased products",
+    card_purchases_empty: "No purchases to display.",
+    card_loading: "Loading...",
     home_current_flyers: "CURRENT FLYERS",
     home_best_deals: "BEST DEALS",
     points: "Points",
@@ -555,6 +572,10 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     state_card_invalid: "Numer i pavlefshem i karteles.",
     state_card_linked: "Kjo kartele eshte tashme e lidhur me nje profil tjeter.",
     state_card_error: "Nuk mund te perditesoj kartelen.",
+    card_points_title: "Pike",
+    card_purchases_title: "Produkte te blera",
+    card_purchases_empty: "Nuk ka blerje per t'u shfaqur.",
+    card_loading: "Duke ngarkuar...",
     home_current_flyers: "LETËR NJOFTIME AKTIVE",
     home_best_deals: "AKSIONET MË TË MIRA",
     points: "Pikë",
@@ -691,6 +712,10 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     state_card_invalid: "Gecersiz sadakat karti numarasi.",
     state_card_linked: "Bu kart baska bir profile bagli.",
     state_card_error: "Kart guncellenemedi.",
+    card_points_title: "Puanlar",
+    card_purchases_title: "Satin alinan urunler",
+    card_purchases_empty: "Gosterilecek alisveris yok.",
+    card_loading: "Yukleniyor...",
     home_current_flyers: "GUNCEL BROSURLER",
     home_best_deals: "EN IYI AKSIYONLAR",
     points: "Puanlar",
@@ -1623,7 +1648,17 @@ function FlyersScreen({ flyers, onOpenShoppingList }: { flyers: Flyer[]; onOpenS
   );
 }
 
-function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNumber: string) => Promise<string> }) {
+function CardScreen({
+  card,
+  onScanCard,
+  onLoadPurchases,
+  onLoadPoints,
+}: {
+  card: CardData;
+  onScanCard: (cardNumber: string) => Promise<string>;
+  onLoadPurchases: () => Promise<PurchaseItem[]>;
+  onLoadPoints: () => Promise<number>;
+}) {
   const { palette, mode } = useAppTheme();
   const { t } = useI18n();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -1631,10 +1666,41 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
   const [scanLocked, setScanLocked] = useState(false);
   const [scanStatus, setScanStatus] = useState("");
   const [manualCardInput, setManualCardInput] = useState(card.cardNumber);
+  const [purchases, setPurchases] = useState<PurchaseItem[]>([]);
+  const [points, setPoints] = useState<number>(0);
+  const [isCardDataLoading, setIsCardDataLoading] = useState(false);
 
   useEffect(() => {
     setManualCardInput(card.cardNumber);
   }, [card.cardNumber]);
+
+  useEffect(() => {
+    let active = true;
+    const loadCardData = async () => {
+      if (!card.cardNumber) {
+        if (!active) return;
+        setPurchases([]);
+        setPoints(0);
+        return;
+      }
+      setIsCardDataLoading(true);
+      try {
+        const [nextPurchases, nextPoints] = await Promise.all([onLoadPurchases(), onLoadPoints()]);
+        if (!active) return;
+        setPurchases(nextPurchases);
+        setPoints(nextPoints);
+      } catch {
+        if (!active) return;
+        setPurchases([]);
+      } finally {
+        if (active) setIsCardDataLoading(false);
+      }
+    };
+    void loadCardData();
+    return () => {
+      active = false;
+    };
+  }, [card.cardNumber, onLoadPoints, onLoadPurchases]);
 
   const handleOpenScanner = async () => {
     setScanStatus("");
@@ -1731,6 +1797,28 @@ function CardScreen({ card, onScanCard }: { card: CardData; onScanCard: (cardNum
             <Text style={styles.cardBackBarcodeDigits}>{card.barcode}</Text>
           </View>
         </View>
+      </View>
+      <View style={[styles.cardDataBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
+        <Text style={[styles.cardDataTitle, { color: palette.text }]}>
+          {t("card_points_title")}: <Text style={styles.cardDataPointsValue}>{points}</Text>
+        </Text>
+      </View>
+      <View style={[styles.cardDataBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
+        <Text style={[styles.cardDataTitle, { color: palette.text }]}>{t("card_purchases_title")}</Text>
+        {isCardDataLoading ? (
+          <Text style={[styles.cardDataEmpty, { color: palette.muted }]}>{t("card_loading")}</Text>
+        ) : purchases.length === 0 ? (
+          <Text style={[styles.cardDataEmpty, { color: palette.muted }]}>{t("card_purchases_empty")}</Text>
+        ) : (
+          purchases.slice(0, 30).map((item, index) => (
+            <View key={`${item.brojSka || "s"}-${item.brKasa || "k"}-${index}`} style={[styles.cardPurchaseRow, { borderBottomColor: palette.border }]}>
+              <Text style={[styles.cardPurchaseName, { color: palette.text }]}>{item.imeArt}</Text>
+              <Text style={[styles.cardPurchaseMeta, { color: palette.muted }]}>
+                {item.datumSka} | x{item.kolicina} | {item.vrednost} ден.
+              </Text>
+            </View>
+          ))
+        )}
       </View>
     </ScreenWrap>
   );
@@ -2514,6 +2602,8 @@ function MainTabs({
   onClearPurchasedShoppingItems,
   onSetLanguage,
   onScanCard,
+  onLoadLoyaltyPurchases,
+  onLoadLoyaltyPoints,
   onCheckPrice,
   onUpdateProfile,
   onChangePassword,
@@ -2540,6 +2630,8 @@ function MainTabs({
   onClearPurchasedShoppingItems: () => void;
   onSetLanguage: (language: LanguageCode) => void;
   onScanCard: (cardNumber: string) => Promise<string>;
+  onLoadLoyaltyPurchases: () => Promise<PurchaseItem[]>;
+  onLoadLoyaltyPoints: () => Promise<number>;
   onCheckPrice: (query: string) => Promise<{ product: ProductPrice | null; error: string | null }>;
   onUpdateProfile: (name: string, email: string) => void;
   onChangePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => void;
@@ -2681,7 +2773,14 @@ function MainTabs({
           tabBarItemStyle: { display: "none" },
         }}
       >
-        {() => <CardScreen card={card} onScanCard={onScanCard} />}
+        {() => (
+          <CardScreen
+            card={card}
+            onScanCard={onScanCard}
+            onLoadPurchases={onLoadLoyaltyPurchases}
+            onLoadPoints={onLoadLoyaltyPoints}
+          />
+        )}
       </Tab.Screen>
       <Tab.Screen
         name="Locations"
@@ -3140,6 +3239,27 @@ export default function App() {
     }
   };
 
+  const handleLoadLoyaltyPurchases = async (): Promise<PurchaseItem[]> => {
+    if (!authToken) return [];
+    try {
+      const result = await apiGet<{ items?: PurchaseItem[] }>(apiBase, "/loyalty/purchases", authToken);
+      return Array.isArray(result?.items) ? result.items : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const handleLoadLoyaltyPoints = async (): Promise<number> => {
+    if (!authToken) return 0;
+    try {
+      const result = await apiGet<{ points?: number }>(apiBase, "/loyalty/points", authToken);
+      const value = Number(result?.points ?? 0);
+      return Number.isFinite(value) ? value : 0;
+    } catch {
+      return 0;
+    }
+  };
+
   const handleUpdateProfile = async (name: string, email: string) => {
     if (!authToken) return;
     try {
@@ -3194,7 +3314,7 @@ export default function App() {
     setBestDeals([]);
     setHomeTopItem(null);
     setNotices(fallbackNotices);
-    setCard(fallbackCard);
+    setCard({ cardNumber: "", barcode: "", qrValue: "" });
   };
 
   const handleAddShoppingItem = (name: string, quantity: string, note: string) => {
@@ -3310,6 +3430,8 @@ export default function App() {
                 onClearPurchasedShoppingItems={handleClearPurchasedShoppingItems}
                 onSetLanguage={setLanguage}
                 onScanCard={handleScanCard}
+                onLoadLoyaltyPurchases={handleLoadLoyaltyPurchases}
+                onLoadLoyaltyPoints={handleLoadLoyaltyPoints}
                 onCheckPrice={handleCheckPrice}
                 onUpdateProfile={handleUpdateProfile}
                 onChangePassword={handleChangePassword}
@@ -4016,6 +4138,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
+  },
+  cardDataBox: {
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    gap: 6,
+  },
+  cardDataTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  cardDataPointsValue: {
+    color: colors.green,
+    fontWeight: "900",
+  },
+  cardDataEmpty: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  cardPurchaseRow: {
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+  },
+  cardPurchaseName: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  cardPurchaseMeta: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: "600",
   },
   cardLogo: {
     width: 110,

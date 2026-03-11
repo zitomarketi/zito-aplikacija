@@ -30,6 +30,7 @@ const EXTERNAL_PRICES_API_PATH = String(process.env.EXTERNAL_PRICES_API_PATH || 
 const EXTERNAL_PRICES_TIMEOUT_MS = Number(process.env.EXTERNAL_PRICES_TIMEOUT_MS || 9000);
 const PRICE_REFRESH_HOUR_LOCAL = Number(process.env.PRICE_REFRESH_HOUR_LOCAL || 7);
 const PRICE_REFRESH_TIMEZONE = String(process.env.PRICE_REFRESH_TIMEZONE || "Europe/Skopje").trim() || "Europe/Skopje";
+const LOYALTY_SOAP_URL = String(process.env.LOYALTY_SOAP_URL || "").trim();
 const APK_ASSET_GROUP_DIRS = {
   letoci: path.resolve(__dirname, "..", "zito-app", "assets", "images", "letoci"),
   akcii: path.resolve(__dirname, "..", "zito-app", "assets", "images", "akcii"),
@@ -203,6 +204,102 @@ function isPriceFreshForBusinessDay(updatedAt) {
   const updatedKey = businessDayKey(parsed, PRICE_REFRESH_TIMEZONE, refreshHour);
   const currentKey = businessDayKey(now, PRICE_REFRESH_TIMEZONE, refreshHour);
   return updatedKey === currentKey;
+}
+
+function hasLoyaltySoapConfigured() {
+  return /^https?:\/\//i.test(LOYALTY_SOAP_URL);
+}
+
+function escapeXml(input) {
+  return String(input || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function decodeXmlEntities(input) {
+  return String(input || "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+function extractTagValue(xml, tag) {
+  const match = String(xml || "").match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i"));
+  return match ? decodeXmlEntities(match[1]).trim() : "";
+}
+
+function parseLoyaltyPurchases(xmlText) {
+  const decoded = decodeXmlEntities(xmlText);
+  const list = [];
+  const blocks = decoded.match(/<LicnaSmetka>[\s\S]*?<\/LicnaSmetka>/gi) || [];
+  for (const block of blocks) {
+    list.push({
+      brKasa: extractTagValue(block, "BrKasa"),
+      brojSka: extractTagValue(block, "Broj_Ska"),
+      datumSka: extractTagValue(block, "Datum_Ska"),
+      imeArt: extractTagValue(block, "ImeArt"),
+      kolicina: extractTagValue(block, "Kolicina"),
+      vrednost: extractTagValue(block, "Vrednost"),
+    });
+  }
+  return list;
+}
+
+async function callLoyaltySoap(methodName, barkod) {
+  if (!hasLoyaltySoapConfigured()) {
+    return { ok: false, error: "LOYALTY_SOAP_URL is not configured", raw: "" };
+  }
+  const envelope = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Body>
+    <tem:${methodName}>
+      <tem:barkod>${escapeXml(barkod)}</tem:barkod>
+    </tem:${methodName}>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const response = await fetch(LOYALTY_SOAP_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/xml; charset=utf-8",
+        SOAPAction: `"http://tempuri.org/${methodName}"`,
+      },
+      body: envelope,
+      signal: controller.signal,
+    });
+    const raw = await response.text();
+    if (!response.ok) return { ok: false, error: `SOAP HTTP ${response.status}`, raw };
+    return { ok: true, error: "", raw };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error), raw: "" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function parseLoyaltyVerify(rawSoap) {
+  const decoded = decodeXmlEntities(rawSoap);
+  const resultMatch = decoded.match(/<\w*:?(?:ProverkaKorisnikResult|ProverkaKorisnikResponseResult|string)[^>]*>([\s\S]*?)<\/\w*:?(?:ProverkaKorisnikResult|ProverkaKorisnikResponseResult|string)>/i);
+  const value = (resultMatch ? resultMatch[1] : decoded).toLowerCase().trim();
+  if (!value) return false;
+  return value.includes("true") || value === "1" || value.includes("valid") || value.includes("ok");
+}
+
+function parseLoyaltyPoints(rawSoap) {
+  const decoded = decodeXmlEntities(rawSoap);
+  const resultMatch = decoded.match(/<\w*:?(?:ZemiPoeniZaBarkodResult|string)[^>]*>([\s\S]*?)<\/\w*:?(?:ZemiPoeniZaBarkodResult|string)>/i);
+  const value = resultMatch ? decodeXmlEntities(resultMatch[1]) : decoded;
+  const numberMatch = String(value).match(/-?\d+(?:[.,]\d+)?/);
+  if (!numberMatch) return 0;
+  return Number(numberMatch[0].replace(",", ".")) || 0;
 }
 
 function asNumberValue(input) {
@@ -853,6 +950,15 @@ app.post("/auth/register", async (req, res) => {
     if (!isValidCardNumber(submittedCardNumber)) {
       return res.status(400).json({ error: "Invalid loyalty card number format" });
     }
+    if (hasLoyaltySoapConfigured()) {
+      const verifyResult = await callLoyaltySoap("ProverkaKorisnik", submittedCardNumber);
+      if (!verifyResult.ok) {
+        return res.status(502).json({ error: `Loyalty service unavailable: ${verifyResult.error}` });
+      }
+      if (!parseLoyaltyVerify(verifyResult.raw)) {
+        return res.status(400).json({ error: "Invalid loyalty card number" });
+      }
+    }
     const existingCardOwner = await db.getUserByCardNumber(submittedCardNumber);
     if (existingCardOwner) {
       return res.status(409).json({ error: "Loyalty card is already linked to another profile" });
@@ -1051,6 +1157,16 @@ app.post("/me/card", requireAuth, async (req, res) => {
   }
 
   try {
+    if (hasLoyaltySoapConfigured()) {
+      const verifyResult = await callLoyaltySoap("ProverkaKorisnik", cardNumber);
+      if (!verifyResult.ok) {
+        return res.status(502).json({ error: `Loyalty service unavailable: ${verifyResult.error}` });
+      }
+      if (!parseLoyaltyVerify(verifyResult.raw)) {
+        return res.status(400).json({ error: "Invalid loyalty card number" });
+      }
+    }
+
     const user = await db.getUserById(req.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -1079,6 +1195,34 @@ app.get("/loyalty/card", requireAuth, (req, res) => {
       qrValue: `ZITO:${user.cardNumber}:${user.id}`,
     });
   }).catch((error) => res.status(500).json({ error: String(error) }));
+});
+
+app.get("/loyalty/purchases", requireAuth, async (req, res) => {
+  try {
+    const user = await db.getUserById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const barkod = normalizeCardNumber(user.cardNumber);
+    if (!isValidCardNumber(barkod)) return res.status(400).json({ error: "No valid loyalty card linked" });
+    const soap = await callLoyaltySoap("ZemiLicnaSmetka", barkod);
+    if (!soap.ok) return res.status(502).json({ error: `Loyalty service unavailable: ${soap.error}` });
+    return res.json({ items: parseLoyaltyPurchases(soap.raw) });
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
+});
+
+app.get("/loyalty/points", requireAuth, async (req, res) => {
+  try {
+    const user = await db.getUserById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const barkod = normalizeCardNumber(user.cardNumber);
+    if (!isValidCardNumber(barkod)) return res.status(400).json({ error: "No valid loyalty card linked" });
+    const soap = await callLoyaltySoap("ZemiPoeniZaBarkod", barkod);
+    if (!soap.ok) return res.status(502).json({ error: `Loyalty service unavailable: ${soap.error}` });
+    return res.json({ points: parseLoyaltyPoints(soap.raw) });
+  } catch (error) {
+    return res.status(500).json({ error: String(error) });
+  }
 });
 
 app.get("/flyers", requireAuth, (_req, res) => {
