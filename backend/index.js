@@ -25,6 +25,9 @@ if (
 const ADMIN_TOKEN = envAdminToken && envAdminToken !== "change-me" ? envAdminToken : "local-dev-admin-token";
 const JWT_SECRET = envJwtSecret && envJwtSecret !== "change-me" ? envJwtSecret : "local-dev-jwt-secret";
 const BACKEND_PUBLIC_URL = (process.env.BACKEND_PUBLIC_URL || "").replace(/\/+$/, "");
+const EXTERNAL_PRICES_API_BASE = String(process.env.EXTERNAL_PRICES_API_BASE || "").trim().replace(/\/+$/, "");
+const EXTERNAL_PRICES_API_PATH = String(process.env.EXTERNAL_PRICES_API_PATH || "/api/artikli").trim() || "/api/artikli";
+const EXTERNAL_PRICES_TIMEOUT_MS = Number(process.env.EXTERNAL_PRICES_TIMEOUT_MS || 9000);
 const APK_ASSET_GROUP_DIRS = {
   letoci: path.resolve(__dirname, "..", "zito-app", "assets", "images", "letoci"),
   akcii: path.resolve(__dirname, "..", "zito-app", "assets", "images", "akcii"),
@@ -110,6 +113,104 @@ function normalizeBarcode(input) {
 
 function isValidBarcode(barcode) {
   return /^\d{6,32}$/.test(barcode);
+}
+
+function asNumberValue(input) {
+  if (typeof input === "number" && Number.isFinite(input)) return input;
+  if (typeof input === "string") {
+    const normalized = input.replace(",", ".").replace(/[^\d.-]/g, "").trim();
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function normalizeExternalPriceItem(item, barcode) {
+  if (!item || typeof item !== "object") return null;
+  const barcodeCandidates = [
+    item.barcode,
+    item.barkod,
+    item.Barcode,
+    item.Barkod,
+    item.sifra,
+    item.Sifra,
+    item.code,
+    item.Code,
+  ]
+    .map((x) => normalizeBarcode(x))
+    .filter(Boolean);
+  if (barcodeCandidates.length > 0 && !barcodeCandidates.includes(barcode)) return null;
+
+  const name =
+    String(item.name || item.naziv || item.artikl || item.Naziv || item.Artikl || "")
+      .trim() || `Proizvod ${barcode}`;
+  const priceNumber =
+    asNumberValue(item.price) ??
+    asNumberValue(item.cena) ??
+    asNumberValue(item.Cena) ??
+    asNumberValue(item.maloprodazna) ??
+    asNumberValue(item.Maloprodazna) ??
+    asNumberValue(item.iznos) ??
+    asNumberValue(item.Iznos);
+  if (priceNumber === null) return null;
+  const unit = String(item.unit || item.ed || item.edm || item.Unit || item.ED || "").trim();
+  const updatedAt = String(item.updatedAt || item.datum || item.date || item.UpdatedAt || "").trim();
+  return {
+    barcode,
+    name,
+    price: String(priceNumber),
+    currency: "MKD",
+    unit,
+    updatedAt: updatedAt || new Date().toISOString(),
+  };
+}
+
+function extractArrayPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.items)) return payload.items;
+  if (Array.isArray(payload.results)) return payload.results;
+  if (Array.isArray(payload.value)) return payload.value;
+  return [];
+}
+
+async function fetchExternalPrice(barcode) {
+  if (!EXTERNAL_PRICES_API_BASE) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Math.max(1000, EXTERNAL_PRICES_TIMEOUT_MS));
+  try {
+    const baseUrl = `${EXTERNAL_PRICES_API_BASE}${EXTERNAL_PRICES_API_PATH.startsWith("/") ? "" : "/"}${EXTERNAL_PRICES_API_PATH}`;
+    const urlWithBarcode = `${baseUrl}?${new URLSearchParams({ barcode }).toString()}`;
+
+    let response = await fetch(urlWithBarcode, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+
+    if (!response.ok && response.status !== 404) return null;
+    if (!response.ok || response.status === 404) {
+      response = await fetch(baseUrl, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (!response.ok) return null;
+    }
+
+    const payload = await response.json();
+    const rows = extractArrayPayload(payload);
+    for (const row of rows) {
+      const mapped = normalizeExternalPriceItem(row, barcode);
+      if (mapped) return mapped;
+    }
+    return null;
+  } catch (_error) {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function listApkAssets(group) {
@@ -875,6 +976,9 @@ app.post("/price/check", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Invalid barcode format" });
   }
   try {
+    const externalPrice = await fetchExternalPrice(barcode);
+    if (externalPrice) return res.json(externalPrice);
+
     const price = await db.getProductPriceByBarcode(barcode);
     if (!price) return res.status(404).json({ error: "Product not found" });
     return res.json(price);
