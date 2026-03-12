@@ -2950,7 +2950,7 @@ function ScreenWrap({
   const tabBarHeight = useBottomTabBarHeight();
   return (
     <SafeAreaView edges={["left", "right", "bottom"]} style={[styles.screen, { backgroundColor: palette.bg }]}>
-      <View style={[styles.topBrandBar, { height: insets.top + 64 }]}>
+      <View style={[styles.topBrandBar, { height: insets.top + 74 }]}>
         <Image source={topBrandLogoImage} style={styles.topBrandLogo} resizeMode="contain" />
       </View>
       <ScrollView
