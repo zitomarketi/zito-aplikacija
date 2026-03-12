@@ -7,17 +7,60 @@
     <style>
       body {
         font-family: Arial, sans-serif;
-        margin: 24px;
-        background: #f1f1f1;
-        color: #111;
+        margin: 0;
+        background: #eef2f7;
+        color: #101828;
+      }
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px 16px 36px 16px;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: rgba(238, 242, 247, 0.96);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid #dbe2ea;
+        margin: 0 -16px 16px -16px;
+        padding: 14px 16px 12px 16px;
+      }
+      .topbar h1 {
+        margin: 0 0 10px 0;
+        font-size: 24px;
+      }
+      .nav-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .nav-tabs button {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #fff;
+        color: #0a8f43;
+        border: 1px solid #b8d9c6;
+        font-size: 13px;
+      }
+      .nav-tabs button:hover {
+        background: #eaf7ef;
       }
       .card {
         background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 12px;
+        border: 1px solid #d8e1ea;
+        border-radius: 14px;
         padding: 16px;
         margin-bottom: 14px;
-        max-width: 860px;
+        box-shadow: 0 2px 10px rgba(16, 24, 40, 0.04);
+      }
+      .split {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .card.full {
+        grid-column: 1 / -1;
       }
       input {
         width: 100%;
@@ -118,11 +161,28 @@
         gap: 8px;
         margin: 6px 0 10px 0;
       }
+      @media (max-width: 900px) {
+        .split {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
-    <h1>Zito Admin Panel</h1>
-    <div class="card">
+    <div class="page">
+      <div class="topbar">
+        <h1>Zito Admin Panel</h1>
+        <div class="nav-tabs">
+          <button type="button" onclick="scrollToSection('sec-auth')">Auth</button>
+          <button type="button" onclick="scrollToSection('sec-content')">Content</button>
+          <button type="button" onclick="scrollToSection('sec-push')">Push</button>
+          <button type="button" onclick="scrollToSection('sec-apk')">APK</button>
+          <button type="button" onclick="scrollToSection('sec-prices')">Prices</button>
+          <button type="button" onclick="scrollToSection('sec-logs')">Logs</button>
+        </div>
+      </div>
+      <div class="split">
+    <div class="card" id="sec-auth">
       <label>Admin token</label>
       <input id="token" value="" placeholder="Enter admin token from environment" />
       <div class="token-actions">
@@ -131,7 +191,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-content">
       <h3>Add Flyer</h3>
       <input id="flyerTitle" placeholder="Title" />
       <input id="flyerPrice" placeholder="Price (e.g. 89 den.)" />
@@ -139,7 +199,7 @@
       <button onclick="addFlyer()">Save Flyer</button>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-notification-create">
       <h3>Notifications</h3>
       <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 10px; margin-bottom: 10px">
         <strong>Text message</strong>
@@ -155,14 +215,14 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-push">
       <h3>Push Broadcast</h3>
       <input id="pushTitle" placeholder="Title" />
       <input id="pushBody" placeholder="Body" />
       <button onclick="sendPush()">Send Push</button>
     </div>
 
-    <div class="card">
+    <div class="card full" id="sec-flyers">
       <div class="section-head">
         <h3>Flyers</h3>
         <button onclick="loadFlyers()">Refresh</button>
@@ -170,7 +230,7 @@
       <div id="flyersList"></div>
     </div>
 
-    <div class="card">
+    <div class="card full" id="sec-notifications">
       <div class="section-head">
         <h3>Notifications</h3>
         <button onclick="loadNotifications()">Refresh</button>
@@ -178,7 +238,7 @@
       <div id="notificationsList"></div>
     </div>
 
-    <div class="card">
+    <div class="card full" id="sec-prices">
       <div class="section-head">
         <h3>Product Prices</h3>
         <button onclick="loadPrices()">Refresh</button>
@@ -186,7 +246,7 @@
       <div id="pricesList"></div>
     </div>
 
-    <div class="card">
+    <div class="card full" id="sec-apk">
       <div class="section-head">
         <h3>APK Visual Catalog (mockup)</h3>
         <button onclick="loadApkGallery()">Refresh</button>
@@ -203,7 +263,7 @@
       <div id="apkBestDeals" class="gallery-grid"></div>
     </div>
 
-    <div class="card">
+    <div class="card full" id="sec-home-top">
       <div class="section-head">
         <h3>Home Top Field (above flyers)</h3>
         <button onclick="loadHomeTopField()">Refresh</button>
@@ -215,7 +275,11 @@
       <div id="homeTopFieldPreview" class="gallery-grid"></div>
     </div>
 
-    <pre id="out">Ready.</pre>
+      </div>
+    <div id="sec-logs">
+      <pre id="out" style="margin-bottom: 14px">Ready.</pre>
+    </div>
+    </div>
     <input id="galleryFileInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" style="display: none" />
     <input id="notificationFileInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" style="display: none" />
     <input id="homeTopFileInput" type="file" accept="image/png,image/jpeg,image/webp" style="display: none" />
@@ -238,6 +302,14 @@
       let pendingUploadTarget = null;
       if (window.pdfjsLib) {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      }
+
+      function scrollToSection(sectionId) {
+        const byId = document.getElementById(sectionId);
+        const byData = document.querySelector(`[data-section="${sectionId}"]`);
+        const target = byId || byData;
+        if (!target) return;
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
       function adminHeaders() {
