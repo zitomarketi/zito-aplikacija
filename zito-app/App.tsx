@@ -2946,6 +2946,9 @@ function ScreenWrap({
   const tabBarHeight = useBottomTabBarHeight();
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}>
+      <View style={styles.topBrandBar}>
+        <Image source={logoImage} style={styles.topBrandLogo} resizeMode="contain" />
+      </View>
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -3858,6 +3861,18 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  topBrandBar: {
+    backgroundColor: colors.green,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 66,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  topBrandLogo: {
+    width: 128,
+    height: 38,
   },
   scrollContent: {
     padding: 18,
