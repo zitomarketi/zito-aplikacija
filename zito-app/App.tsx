@@ -913,7 +913,7 @@ function useI18n() {
 }
 
 const logoImage = require("./assets/images/logo.png");
-const topBrandLogoImage = require("./assets/images/logo bukvi beli.png");
+const topBrandLogoImage = require("./assets/images/zitobaner.png");
 const tiltedBadgeImage = require("./assets/images/sekogasverninavas_upscaled-removebg-preview.png");
 const bannerImage = require("./assets/images/home_banner.png");
 const flyersImage = require("./assets/images/flyers_grid.png");
@@ -3877,7 +3877,6 @@ const styles = StyleSheet.create({
   topBrandLogo: {
     width: 228,
     height: 56,
-    tintColor: "#FFFFFF",
   },
   scrollContent: {
     padding: 18,
@@ -4219,7 +4218,7 @@ const styles = StyleSheet.create({
   themeToggleBtn: {
     position: "absolute",
     right: 16,
-    top: 32,
+    bottom: 6,
     width: 34,
     height: 34,
     borderRadius: 10,
@@ -4239,7 +4238,6 @@ const styles = StyleSheet.create({
   homeTopBrandLogo: {
     width: 228,
     height: 56,
-    tintColor: "#FFFFFF",
   },
   homeTopFieldWrap: {
     backgroundColor: colors.card,
