@@ -16,6 +16,12 @@
 - File updated:
   - `zito-app/App.tsx`
 
+## March 10, 2026 - Workflow switch: iOS done for now, Android resumed
+- Saved state:
+  - iOS parity guard is pushed to `main` (commit `715b57f`).
+- Active direction updated:
+  - continue with Android tasks from this point.
+
 ## March 9, 2026 - [Mobile/PDF] Loading progress bar in in-app PDF viewer
 - App (`zito-app/App.tsx`):
   - added PDF loading progress state (`0-100%`) in fullscreen PDF modal.
@@ -408,3 +414,70 @@
   - TypeScript check passed.
   - Android release APK built successfully.
   - APK installed on connected device via ADB.
+
+## March 11, 2026 - [Prices] External Artikli API integration + stability fixes
+- Integrated external price source into backend `POST /price/check`:
+  - backend now reads from `EXTERNAL_PRICES_API_BASE` + `EXTERNAL_PRICES_API_PATH`
+  - falls back to local DB when external source is unavailable
+- Expanded external field mapping for real payload format:
+  - barcode matching supports: `glavenBarcode`, `barcodes[]`, `barcode`, `barkod`, `sifraArt`, `sifra`, `code`
+  - product name mapping supports: `imeArt` (plus `name/naziv/artikl` variants)
+- Added app + backend search support by:
+  - barcode
+  - article code (`sifraArt`)
+  - article name (`imeArt`)
+- Added Cyrillic normalization for returned product names in backend response.
+- Added backend persistence/cache for external hits:
+  - successful external lookup is saved into local `product_prices`
+- Added business-day refresh rule for cache validity:
+  - local cached price is considered fresh only for current business day
+  - business-day cutoff configured at `07:00` in `Europe/Skopje`
+  - if stale, backend refreshes from external; if refresh fails, returns last local fallback
+- New optional backend env settings documented:
+  - `EXTERNAL_PRICES_API_BASE`
+  - `EXTERNAL_PRICES_API_PATH`
+  - `EXTERNAL_PRICES_TIMEOUT_MS`
+  - `PRICE_REFRESH_HOUR_LOCAL`
+  - `PRICE_REFRESH_TIMEZONE`
+- Git delivery:
+  - `1eb4960` external API lookup + fallback
+  - `38d9a17` mapping fix for `glavenBarcode/barcodes/imeArt`
+  - `e642c3a` search by barcode/sifra/name + mobile query flow
+  - `9e4608c` cache external results + local-first barcode lookup
+  - `2ac8e45` refresh-by-business-day (07:00, Europe/Skopje)
+
+## March 11, 2026 - [Loyalty] Integration hardening + card management
+- Loyalty backend integration was aligned with real WSDL behavior on `IBRestKartKor`:
+  - switched verification/data fetch logic to endpoint-style calls with parameter mapping:
+    - `ProverkaKorisnik(Username, Password)`
+    - `ZemiLicnaSmetka(Sifra_Kor)`
+    - `ZemiPoeniZaBarkod(Sifra_Kor)` with fallback variants
+- Added configurable verify templates:
+  - `LOYALTY_VERIFY_USERNAME_TEMPLATE` (default `{CARD}`)
+  - `LOYALTY_VERIFY_PASSWORD_TEMPLATE` (default `{CARD}`)
+- Added strict mode guard:
+  - `LOYALTY_SOAP_STRICT_VERIFY`
+  - when `false`, app does not block card save on temporary loyalty-service verify failures.
+- Added card unlink capability:
+  - new backend route: `DELETE /me/card`
+  - mobile card screen now has `Избриши картичка` button to clear linked card.
+- Git delivery:
+  - `64170a5` soft-verify when loyalty service unavailable
+  - `1b34fb8` REST param mapping + credential templates
+  - `bf5c883` delete card action (backend + app)
+
+## March 11, 2026 - [Mobile/Flyers tab] Replaced leaflets with purchase analytics
+- `Летоци` tab was redesigned into analytics dashboard based on loyalty purchases:
+  - totals: spent amount, quantity, receipt count, points
+  - purchase list with date/qty/value/category
+  - category breakdown with pie chart visualization
+  - date filtering (`Од`/`До`) for period analysis
+- Added native date picker UX for selecting date range:
+  - dependency: `@react-native-community/datetimepicker`
+  - Expo plugin registered in `app.config.js`
+- Delivered and validated:
+  - TypeScript checks passed.
+  - Android release APK rebuilt and installed on test device.
+- Git delivery:
+  - `bd7dd40` analytics view in Flyers tab
+  - `6caa6dd` native date picker for from/to filters
