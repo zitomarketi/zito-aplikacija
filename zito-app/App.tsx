@@ -98,6 +98,7 @@ type PurchaseItem = {
   imeArt: string;
   kolicina: string;
   vrednost: string;
+  imeOrg?: string;
 };
 
 type ApkGalleryItem = {
@@ -227,7 +228,7 @@ const currentFlyersMock: CurrentFlyerMock[] = [
 ];
 
 const colors = {
-  bg: "#E0F2DF",
+  bg: "#FFFFFF",
   card: "#FFFFFF",
   green: "#0A8F43",
   dark: "#111111",
@@ -236,7 +237,7 @@ const colors = {
 };
 
 const LIGHT_THEME: ThemePalette = {
-  bg: "#E0F2DF",
+  bg: "#FFFFFF",
   card: "#FFFFFF",
   green: "#0A8F43",
   text: "#111111",
@@ -332,7 +333,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     flyers_recent_purchases: "Купени производи",
     flyers_no_card: "Нема поврзана картичка. Додади картичка во табот Картичка.",
     flyers_no_data: "Нема податоци за избраниот период.",
-    screen_card_title: "Дигитална картичка",
+    screen_card_title: "Лојална",
     screen_card_subtitle: "Жито Клуб",
     screen_prices_title: "Проверка на цена",
     screen_prices_subtitle: "Скенирај баркод за моментална цена",
@@ -1768,6 +1769,7 @@ function FlyersScreen({
   const [isLoading, setIsLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [showPurchases, setShowPurchases] = useState(false);
   const [activeDateField, setActiveDateField] = useState<"from" | "to" | null>(null);
 
   useEffect(() => {
@@ -1849,6 +1851,20 @@ function FlyersScreen({
       categories,
       topProducts,
     };
+  }, [filteredPurchases]);
+
+  const sortedPurchases = useMemo(() => {
+    const toReceiptNumber = (value: string) => {
+      const parsed = Number(String(value || "").replace(/[^\d]/g, ""));
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    return [...filteredPurchases].sort((a, b) => {
+      const dateA = normalizePurchaseDate(a.datumSka);
+      const dateB = normalizePurchaseDate(b.datumSka);
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      return toReceiptNumber(b.brojSka) - toReceiptNumber(a.brojSka);
+    });
   }, [filteredPurchases]);
 
   const pieColors = ["#0B8F45", "#1EA7FD", "#FFB300", "#E53935", "#8E24AA", "#00897B", "#6D4C41"];
@@ -1996,19 +2012,27 @@ function FlyersScreen({
               </View>
             )}
 
-            <Text style={[styles.analyticsSectionTitle, { color: palette.text }]}>{t("flyers_recent_purchases")}</Text>
-            {filteredPurchases.length === 0 ? (
-              <Text style={[styles.analyticsEmptyText, { color: palette.muted }]}>{t("flyers_no_data")}</Text>
-            ) : (
-              filteredPurchases.slice(0, 120).map((item, idx) => (
-                <View key={`${item.brojSka}-${item.brKasa}-${idx}`} style={[styles.analyticsPurchaseRow, { borderBottomColor: palette.border }]}>
-                  <Text style={[styles.analyticsPurchaseName, { color: palette.text }]}>{item.imeArt}</Text>
-                  <Text style={[styles.analyticsPurchaseMeta, { color: palette.muted }]}>
-                    {normalizePurchaseDate(item.datumSka)} | x{item.kolicina} | {toNumberSafe(item.vrednost).toFixed(2)} ден. | {categorizeProduct(item.imeArt)}
-                  </Text>
-                </View>
-              ))
-            )}
+            <Pressable
+              style={[styles.analyticsPurchasesToggleBtn, { backgroundColor: palette.inputBg, borderColor: palette.border }]}
+              onPress={() => setShowPurchases((prev) => !prev)}
+            >
+              <Text style={[styles.analyticsPurchasesToggleText, { color: palette.text }]}>{t("flyers_recent_purchases")}</Text>
+              <Ionicons name={showPurchases ? "chevron-up" : "chevron-down"} size={16} color={palette.text} />
+            </Pressable>
+            {showPurchases ? (
+              filteredPurchases.length === 0 ? (
+                <Text style={[styles.analyticsEmptyText, { color: palette.muted }]}>{t("flyers_no_data")}</Text>
+              ) : (
+                sortedPurchases.slice(0, 120).map((item, idx) => (
+                  <View key={`${item.brojSka}-${item.brKasa}-${idx}`} style={[styles.analyticsPurchaseRow, { borderBottomColor: palette.border }]}>
+                    <Text style={[styles.analyticsPurchaseName, { color: palette.text }]}>{item.imeArt}</Text>
+                    <Text style={[styles.analyticsPurchaseMeta, { color: palette.muted }]}>
+                      Сметка: {item.brojSka || "-"} | {normalizePurchaseDate(item.datumSka)} | x{item.kolicina} | {toNumberSafe(item.vrednost).toFixed(2)} ден. | {categorizeProduct(item.imeArt)}
+                    </Text>
+                  </View>
+                ))
+              )
+            ) : null}
           </>
         )}
       </View>
@@ -2020,13 +2044,11 @@ function CardScreen({
   card,
   onScanCard,
   onDeleteCard,
-  onLoadPurchases,
   onLoadPoints,
 }: {
   card: CardData;
   onScanCard: (cardNumber: string) => Promise<string>;
   onDeleteCard: () => Promise<string>;
-  onLoadPurchases: () => Promise<PurchaseItem[]>;
   onLoadPoints: () => Promise<number>;
 }) {
   const { palette, mode } = useAppTheme();
@@ -2036,9 +2058,7 @@ function CardScreen({
   const [scanLocked, setScanLocked] = useState(false);
   const [scanStatus, setScanStatus] = useState("");
   const [manualCardInput, setManualCardInput] = useState(card.cardNumber);
-  const [purchases, setPurchases] = useState<PurchaseItem[]>([]);
   const [points, setPoints] = useState<number>(0);
-  const [isCardDataLoading, setIsCardDataLoading] = useState(false);
 
   useEffect(() => {
     setManualCardInput(card.cardNumber);
@@ -2049,28 +2069,22 @@ function CardScreen({
     const loadCardData = async () => {
       if (!card.cardNumber) {
         if (!active) return;
-        setPurchases([]);
         setPoints(0);
         return;
       }
-      setIsCardDataLoading(true);
       try {
-        const [nextPurchases, nextPoints] = await Promise.all([onLoadPurchases(), onLoadPoints()]);
+        const nextPoints = await onLoadPoints();
         if (!active) return;
-        setPurchases(nextPurchases);
         setPoints(nextPoints);
       } catch {
         if (!active) return;
-        setPurchases([]);
-      } finally {
-        if (active) setIsCardDataLoading(false);
       }
     };
     void loadCardData();
     return () => {
       active = false;
     };
-  }, [card.cardNumber, onLoadPoints, onLoadPurchases]);
+  }, [card.cardNumber, onLoadPoints]);
 
   const handleOpenScanner = async () => {
     setScanStatus("");
@@ -2183,23 +2197,6 @@ function CardScreen({
         <Text style={[styles.cardDataTitle, { color: palette.text }]}>
           {t("card_points_title")}: <Text style={styles.cardDataPointsValue}>{points}</Text>
         </Text>
-      </View>
-      <View style={[styles.cardDataBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
-        <Text style={[styles.cardDataTitle, { color: palette.text }]}>{t("card_purchases_title")}</Text>
-        {isCardDataLoading ? (
-          <Text style={[styles.cardDataEmpty, { color: palette.muted }]}>{t("card_loading")}</Text>
-        ) : purchases.length === 0 ? (
-          <Text style={[styles.cardDataEmpty, { color: palette.muted }]}>{t("card_purchases_empty")}</Text>
-        ) : (
-          purchases.slice(0, 30).map((item, index) => (
-            <View key={`${item.brojSka || "s"}-${item.brKasa || "k"}-${index}`} style={[styles.cardPurchaseRow, { borderBottomColor: palette.border }]}>
-              <Text style={[styles.cardPurchaseName, { color: palette.text }]}>{item.imeArt}</Text>
-              <Text style={[styles.cardPurchaseMeta, { color: palette.muted }]}>
-                {item.datumSka} | x{item.kolicina} | {item.vrednost} ден.
-              </Text>
-            </View>
-          ))
-        )}
       </View>
     </ScreenWrap>
   );
@@ -3201,7 +3198,6 @@ function MainTabs({
             card={card}
             onScanCard={onScanCard}
             onDeleteCard={onDeleteCard}
-            onLoadPurchases={onLoadLoyaltyPurchases}
             onLoadPoints={onLoadLoyaltyPoints}
           />
         )}
@@ -4639,6 +4635,20 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 4,
   },
+  analyticsPurchasesToggleBtn: {
+    marginTop: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  analyticsPurchasesToggleText: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
   analyticsPieWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -4671,6 +4681,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingVertical: 7,
     gap: 2,
+  },
+  analyticsMarketGroup: {
+    marginTop: 8,
+  },
+  analyticsMarketTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 2,
   },
   analyticsPurchaseName: {
     fontSize: 13,
