@@ -1444,14 +1444,8 @@ function HomeScreen({
 
   return (
     <SafeAreaView edges={["left", "right", "bottom"]} style={[styles.screen, { backgroundColor: palette.bg }]}>
-      <ScrollView
-        contentContainerStyle={[styles.homeScrollContent, { paddingBottom: insets.bottom + 84 }]}
-        showsVerticalScrollIndicator={false}
-      >
-      <View style={styles.homeFixedWrap}>
-        <View style={[styles.homeTopBrandBar, { paddingTop: insets.top }]}>
-          <Image source={topBrandLogoImage} style={styles.homeTopBrandLogo} resizeMode="contain" />
-        </View>
+      <View style={[styles.homeTopBrandBar, { paddingTop: insets.top }]}>
+        <Image source={topBrandLogoImage} style={styles.homeTopBrandLogo} resizeMode="contain" />
         <Pressable style={[styles.themeToggleBtn, { backgroundColor: palette.card, borderColor: palette.border }]} onPress={toggleTheme}>
           <Ionicons
             name={mode === "light" ? "moon-outline" : "sunny-outline"}
@@ -1459,6 +1453,12 @@ function HomeScreen({
             color={palette.green}
           />
         </Pressable>
+      </View>
+      <ScrollView
+        contentContainerStyle={[styles.homeScrollContent, { paddingBottom: insets.bottom + 84 }]}
+        showsVerticalScrollIndicator={false}
+      >
+      <View style={styles.homeFixedWrap}>
         {homeTopItem?.imageUrl ? (
           <View style={[styles.homeTopFieldWrap, { backgroundColor: palette.card, borderColor: palette.border }]}>
             <Image
@@ -3875,8 +3875,9 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   topBrandLogo: {
-    width: 168,
-    height: 42,
+    width: 228,
+    height: 56,
+    tintColor: "#FFFFFF",
   },
   scrollContent: {
     padding: 18,
@@ -4209,7 +4210,7 @@ const styles = StyleSheet.create({
   },
   homeFixedWrap: {
     paddingHorizontal: 16,
-    paddingTop: 0,
+    paddingTop: 10,
     gap: 10,
   },
   homeScrollContent: {
@@ -4218,7 +4219,7 @@ const styles = StyleSheet.create({
   themeToggleBtn: {
     position: "absolute",
     right: 16,
-    top: 20,
+    top: 32,
     width: 34,
     height: 34,
     borderRadius: 10,
@@ -4228,18 +4229,17 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   homeTopBrandBar: {
-    marginHorizontal: -16,
     alignSelf: "stretch",
-    minHeight: 72,
+    minHeight: 88,
     backgroundColor: "#00A651",
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 8,
-    marginBottom: 4,
+    paddingBottom: 10,
   },
   homeTopBrandLogo: {
-    width: 168,
-    height: 42,
+    width: 228,
+    height: 56,
+    tintColor: "#FFFFFF",
   },
   homeTopFieldWrap: {
     backgroundColor: colors.card,
