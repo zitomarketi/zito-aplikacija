@@ -176,6 +176,7 @@
           <button type="button" onclick="scrollToSection('sec-auth')">Auth</button>
           <button type="button" onclick="scrollToSection('sec-notification-create')">Notifications</button>
           <button type="button" onclick="scrollToSection('sec-push')">Push</button>
+          <button type="button" onclick="scrollToSection('sec-vouchers')">Vouchers</button>
           <button type="button" onclick="scrollToSection('sec-apk')">APK</button>
           <button type="button" onclick="scrollToSection('sec-logs')">Logs</button>
         </div>
@@ -211,6 +212,30 @@
       <input id="pushTitle" placeholder="Title" />
       <input id="pushBody" placeholder="Body" />
       <button onclick="sendPush()">Send Push</button>
+    </div>
+
+    <div class="card" id="sec-vouchers">
+      <h3>Vouchers</h3>
+      <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 10px; margin-bottom: 10px">
+        <strong>Rules</strong>
+        <input id="voucherRegisterAmount" placeholder="Auto for new user (amount)" />
+        <input id="voucherTurnover5000Amount" placeholder="Monthly turnover > 5000 (amount)" />
+        <input id="voucherTurnover10000Amount" placeholder="Monthly turnover > 10000 (amount)" />
+        <input id="voucherExpiryDays" placeholder="Voucher expiry days (e.g. 30)" />
+        <button onclick="saveVoucherRules()">Save voucher rules</button>
+      </div>
+      <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 10px; margin-bottom: 10px">
+        <strong>Upload Excel (.xls/.xlsx)</strong>
+        <div class="meta">Column A = barcode, Column B = amount</div>
+        <button type="button" onclick="openVoucherExcelUpload()">Upload Excel</button>
+      </div>
+      <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 10px">
+        <strong>Manual assign</strong>
+        <input id="voucherAssignCard" placeholder="Card number" />
+        <input id="voucherAssignBarcode" placeholder="Voucher barcode (optional)" />
+        <input id="voucherAssignAmount" placeholder="Amount (optional, if no barcode)" />
+        <button type="button" onclick="assignVoucherManual()">Assign voucher</button>
+      </div>
     </div>
 
     <div class="card full" id="sec-notifications">
@@ -256,6 +281,15 @@
       <div id="homeTopFieldPreview" class="gallery-grid"></div>
     </div>
 
+    <div class="card full" id="sec-vouchers-list">
+      <div class="section-head">
+        <h3>Vouchers</h3>
+        <button onclick="loadVouchers()">Refresh</button>
+      </div>
+      <div id="voucherStats" class="meta" style="margin-bottom:8px">-</div>
+      <div id="vouchersList"></div>
+    </div>
+
       </div>
     <div id="sec-logs">
       <pre id="out" style="margin-bottom: 14px">Ready.</pre>
@@ -264,6 +298,7 @@
     <input id="galleryFileInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" style="display: none" />
     <input id="notificationFileInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" style="display: none" />
     <input id="homeTopFileInput" type="file" accept="image/png,image/jpeg,image/webp" style="display: none" />
+    <input id="voucherExcelInput" type="file" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display: none" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
     <script>
@@ -275,10 +310,13 @@
       const pricesList = document.getElementById("pricesList");
       const apkCurrentFlyers = document.getElementById("apkCurrentFlyers");
       const apkBestDeals = document.getElementById("apkBestDeals");
+      const vouchersList = document.getElementById("vouchersList");
+      const voucherStats = document.getElementById("voucherStats");
       const tokenInput = document.getElementById("token");
       const galleryFileInput = document.getElementById("galleryFileInput");
       const notificationFileInput = document.getElementById("notificationFileInput");
       const homeTopFileInput = document.getElementById("homeTopFileInput");
+      const voucherExcelInput = document.getElementById("voucherExcelInput");
       const homeTopFieldPreview = document.getElementById("homeTopFieldPreview");
       let pendingUploadTarget = null;
       if (window.pdfjsLib) {
@@ -491,6 +529,90 @@
               )
               .join("")
           : "<div class='meta'>No notifications</div>";
+      }
+
+      async function loadVoucherRules() {
+        const rules = await callGet("/admin/vouchers/config");
+        if (!rules) return;
+        document.getElementById("voucherRegisterAmount").value = rules.registerAmount ?? 0;
+        document.getElementById("voucherTurnover5000Amount").value = rules.turnover5000Amount ?? 0;
+        document.getElementById("voucherTurnover10000Amount").value = rules.turnover10000Amount ?? 0;
+        document.getElementById("voucherExpiryDays").value = rules.expiryDays ?? 30;
+      }
+
+      async function saveVoucherRules() {
+        await call("/admin/vouchers/config", {
+          registerAmount: document.getElementById("voucherRegisterAmount").value,
+          turnover5000Amount: document.getElementById("voucherTurnover5000Amount").value,
+          turnover10000Amount: document.getElementById("voucherTurnover10000Amount").value,
+          expiryDays: document.getElementById("voucherExpiryDays").value,
+        });
+        await loadVoucherRules();
+        await loadVouchers();
+      }
+
+      function openVoucherExcelUpload() {
+        voucherExcelInput.click();
+      }
+
+      async function handleVoucherExcelPicked(event) {
+        try {
+          const file = event?.target?.files?.[0];
+          if (!file) return;
+          const ext = String(file.name || "").toLowerCase();
+          if (!ext.endsWith(".xls") && !ext.endsWith(".xlsx")) {
+            out.textContent = "Only .xls or .xlsx is supported for vouchers.";
+            return;
+          }
+          const dataBase64 = await fileToBase64(file);
+          const ok = await callUpload("/admin/vouchers/upload-excel", {
+            fileName: file.name,
+            dataBase64,
+          });
+          if (ok) await loadVouchers();
+        } catch (error) {
+          out.textContent = String(error?.message || error || "Voucher Excel upload failed.");
+        } finally {
+          voucherExcelInput.value = "";
+        }
+      }
+
+      async function assignVoucherManual() {
+        const ok = await call("/admin/vouchers/assign", {
+          cardNumber: document.getElementById("voucherAssignCard").value,
+          barcode: document.getElementById("voucherAssignBarcode").value,
+          amount: document.getElementById("voucherAssignAmount").value,
+        });
+        if (ok) {
+          document.getElementById("voucherAssignBarcode").value = "";
+          document.getElementById("voucherAssignAmount").value = "";
+          await loadVouchers();
+        }
+      }
+
+      async function loadVouchers() {
+        const [stats, rows] = await Promise.all([
+          callGet("/admin/vouchers/stats"),
+          callGet("/admin/vouchers?limit=300"),
+        ]);
+        if (stats) {
+          voucherStats.textContent = `Total: ${stats.total || 0} | Free: ${stats.free || 0} | Active: ${stats.active || 0} | Used: ${stats.used || 0} | Expired: ${stats.expired || 0}`;
+        }
+        if (!rows || !vouchersList) return;
+        vouchersList.innerHTML = rows.length
+          ? rows
+              .map(
+                (x) => `
+            <div class="row">
+              <div>
+                <div><strong>${escapeHtml(x.barcode)}</strong> - ${escapeHtml(x.amount)} ден.</div>
+                <div class="meta">Status: ${escapeHtml(x.status)} | Source: ${escapeHtml(x.source)}</div>
+                <div class="meta">Card: ${escapeHtml(x.assignedCardNumber || "-")} | Expires: ${escapeHtml(x.expiresAt || "-")}</div>
+              </div>
+            </div>`,
+              )
+              .join("")
+          : "<div class='meta'>No vouchers</div>";
       }
 
       async function loadPrices() {
@@ -740,6 +862,9 @@
         galleryFileInput.addEventListener("change", handleGalleryFilePicked);
         notificationFileInput.addEventListener("change", handleNotificationFilePicked);
         homeTopFileInput.addEventListener("change", handleHomeTopFilePicked);
+        voucherExcelInput.addEventListener("change", handleVoucherExcelPicked);
+        await loadVoucherRules();
+        await loadVouchers();
         await loadNotifications();
         await loadApkGallery();
         await loadHomeTopField();

@@ -41,6 +41,7 @@ type RootStackParamList = {
 type TabParamList = {
   Home: undefined;
   Flyers: undefined;
+  Vouchers: undefined;
   Card: undefined;
   PriceCheck: undefined;
   Shopping: undefined;
@@ -99,6 +100,16 @@ type PurchaseItem = {
   kolicina: string;
   vrednost: string;
   imeOrg?: string;
+};
+
+type LoyaltyVoucher = {
+  barcode: string;
+  amount: number;
+  status: "active" | "used" | "expired" | "free" | string;
+  source?: string;
+  expiresAt?: string;
+  usedAt?: string;
+  assignedAt?: string;
 };
 
 type ApkGalleryItem = {
@@ -313,6 +324,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tag_action: "АКЦИЈА",
     tab_home: "Почетна",
     tab_flyers: "Летоци",
+    tab_vouchers: "Ваучери",
     tab_card: "Лојална",
     tab_prices: "Цени",
     tab_shopping: "Листа",
@@ -335,6 +347,12 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     flyers_no_data: "Нема податоци за избраниот период.",
     screen_card_title: "Лојална",
     screen_card_subtitle: "Жито Клуб",
+    screen_vouchers_title: "Ваучери",
+    screen_vouchers_subtitle: "Активни, искористени и истечени ваучери",
+    vouchers_active: "Активни",
+    vouchers_used: "Искористени",
+    vouchers_expired: "Истечени",
+    vouchers_empty: "Нема ваучери во оваа категорија.",
     screen_prices_title: "Проверка на цена",
     screen_prices_subtitle: "Скенирај баркод за моментална цена",
     screen_shopping_title: "Шопинг листа",
@@ -468,6 +486,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tag_action: "DEAL",
     tab_home: "Home",
     tab_flyers: "Flyers",
+    tab_vouchers: "Vouchers",
     tab_card: "Card",
     tab_prices: "Prices",
     tab_shopping: "List",
@@ -490,6 +509,12 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     flyers_no_data: "No data for the selected period.",
     screen_card_title: "Digital Card",
     screen_card_subtitle: "Zito Club",
+    screen_vouchers_title: "Vouchers",
+    screen_vouchers_subtitle: "Active, used and expired vouchers",
+    vouchers_active: "Active",
+    vouchers_used: "Used",
+    vouchers_expired: "Expired",
+    vouchers_empty: "No vouchers in this section.",
     screen_prices_title: "Price Check",
     screen_prices_subtitle: "Scan barcode for current in-store price",
     screen_shopping_title: "Shopping List",
@@ -623,6 +648,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tag_action: "AKSION",
     tab_home: "Kreu",
     tab_flyers: "Fletë",
+    tab_vouchers: "Kupona",
     tab_card: "Kartela",
     tab_prices: "Cmimet",
     tab_shopping: "Lista",
@@ -645,6 +671,12 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     flyers_no_data: "Nuk ka te dhena per periudhen e zgjedhur.",
     screen_card_title: "Kartelë Digjitale",
     screen_card_subtitle: "Zito Klub",
+    screen_vouchers_title: "Kupona",
+    screen_vouchers_subtitle: "Aktive, te perdorura dhe te skaduara",
+    vouchers_active: "Aktive",
+    vouchers_used: "Te perdorura",
+    vouchers_expired: "Te skaduara",
+    vouchers_empty: "Nuk ka kupona ne kete kategori.",
     screen_prices_title: "Kontrollo cmimin",
     screen_prices_subtitle: "Skano barkodin per cmimin aktual",
     screen_shopping_title: "Lista e blerjes",
@@ -778,6 +810,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     tag_action: "AKSIYON",
     tab_home: "Ana Sayfa",
     tab_flyers: "Brosurler",
+    tab_vouchers: "Voucher",
     tab_card: "Kart",
     tab_prices: "Fiyat",
     tab_shopping: "Liste",
@@ -800,6 +833,12 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     flyers_no_data: "Secilen aralik icin veri yok.",
     screen_card_title: "Dijital Kart",
     screen_card_subtitle: "Zito Kulup",
+    screen_vouchers_title: "Voucher",
+    screen_vouchers_subtitle: "Aktif, kullanilmis ve suresi dolmus voucherlar",
+    vouchers_active: "Aktif",
+    vouchers_used: "Kullanilmis",
+    vouchers_expired: "Suresi dolmus",
+    vouchers_empty: "Bu bolumde voucher yok.",
     screen_prices_title: "Fiyat kontrolu",
     screen_prices_subtitle: "Guncel fiyat icin barkod tara",
     screen_shopping_title: "Alisveris listesi",
@@ -2202,6 +2241,74 @@ function CardScreen({
   );
 }
 
+function VouchersScreen({
+  onLoadVouchers,
+}: {
+  onLoadVouchers: () => Promise<{ active: LoyaltyVoucher[]; used: LoyaltyVoucher[]; expired: LoyaltyVoucher[] }>;
+}) {
+  const { palette } = useAppTheme();
+  const { t } = useI18n();
+  const [loading, setLoading] = useState(false);
+  const [active, setActive] = useState<LoyaltyVoucher[]>([]);
+  const [used, setUsed] = useState<LoyaltyVoucher[]>([]);
+  const [expired, setExpired] = useState<LoyaltyVoucher[]>([]);
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const data = await onLoadVouchers();
+      setActive(Array.isArray(data.active) ? data.active : []);
+      setUsed(Array.isArray(data.used) ? data.used : []);
+      setExpired(Array.isArray(data.expired) ? data.expired : []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  const renderVoucherSection = (title: string, rows: LoyaltyVoucher[]) => (
+    <View style={[styles.cardDataBox, { backgroundColor: palette.card, borderColor: palette.border }]}>
+      <Text style={[styles.cardDataTitle, { color: palette.text }]}>{title}</Text>
+      {rows.length === 0 ? (
+        <Text style={[styles.cardDataEmpty, { color: palette.muted }]}>{t("vouchers_empty")}</Text>
+      ) : (
+        rows.map((item, idx) => (
+          <View key={`${item.barcode}-${idx}`} style={[styles.cardPurchaseRow, { borderBottomColor: palette.border }]}>
+            <Text style={[styles.cardPurchaseName, { color: palette.text }]}>{item.amount} ден.</Text>
+            <Text style={[styles.cardPurchaseMeta, { color: palette.muted }]}>
+              {item.status.toUpperCase()} | Рок: {item.expiresAt || "-"}
+            </Text>
+            <View style={{ marginTop: 6 }}>
+              <BarcodeStrip value={item.barcode} height={24} />
+            </View>
+            <Text style={[styles.cardPurchaseMeta, { color: palette.muted }]}>Баркод: {item.barcode}</Text>
+          </View>
+        ))
+      )}
+    </View>
+  );
+
+  return (
+    <ScreenWrap
+      title={t("screen_vouchers_title")}
+      subtitle={t("screen_vouchers_subtitle")}
+      titleStyle={[styles.flyersScreenTitle, { color: getHeadlineColorByPalette(palette), textShadowColor: getHeadlineOutlineColorByPalette(palette), textShadowOffset: { width: 0, height: 0 }, textShadowRadius: HEADLINE_OUTLINE_RADIUS }]}
+      subtitleStyle={styles.flyersScreenSubtitle}
+    >
+      <Pressable style={[styles.loginBtn, { marginTop: 0 }]} onPress={() => void refresh()}>
+        <MaterialIcons name="refresh" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{loading ? `${t("refresh_data")}...` : t("refresh_data")}</Text>
+      </Pressable>
+      {renderVoucherSection(t("vouchers_active"), active)}
+      {renderVoucherSection(t("vouchers_used"), used)}
+      {renderVoucherSection(t("vouchers_expired"), expired)}
+    </ScreenWrap>
+  );
+}
+
 function PriceCheckScreen({
   onCheckPrice,
 }: {
@@ -2922,10 +3029,12 @@ function ProfileScreen({
 
 function MoreScreen({
   onOpenCard,
+  onOpenVouchers,
   onOpenLocations,
   onOpenProfile,
 }: {
   onOpenCard: () => void;
+  onOpenVouchers: () => void;
   onOpenLocations: () => void;
   onOpenProfile: () => void;
 }) {
@@ -2946,6 +3055,10 @@ function MoreScreen({
       <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onOpenLocations}>
         <Ionicons name="location-outline" size={20} color={colors.green} />
         <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("tab_locations")}</Text>
+      </Pressable>
+      <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onOpenVouchers}>
+        <Ionicons name="ticket-outline" size={20} color={colors.green} />
+        <Text style={[styles.loginBtnText, { color: colors.green }]}>{t("tab_vouchers")}</Text>
       </Pressable>
       <Pressable style={[styles.loginBtn, { marginTop: 8 }]} onPress={onOpenProfile}>
         <Ionicons name="person-outline" size={20} color={colors.green} />
@@ -3022,6 +3135,7 @@ function MainTabs({
   onDeleteCard,
   onLoadLoyaltyPurchases,
   onLoadLoyaltyPoints,
+  onLoadLoyaltyVouchers,
   onCheckPrice,
   onUpdateProfile,
   onChangePassword,
@@ -3051,6 +3165,7 @@ function MainTabs({
   onDeleteCard: () => Promise<string>;
   onLoadLoyaltyPurchases: () => Promise<PurchaseItem[]>;
   onLoadLoyaltyPoints: () => Promise<number>;
+  onLoadLoyaltyVouchers: () => Promise<{ active: LoyaltyVoucher[]; used: LoyaltyVoucher[]; expired: LoyaltyVoucher[] }>;
   onCheckPrice: (query: string) => Promise<{ product: ProductPrice | null; error: string | null }>;
   onUpdateProfile: (name: string, email: string) => void;
   onChangePassword: (currentPassword: string, newPassword: string, confirmPassword: string) => void;
@@ -3126,6 +3241,7 @@ function MainTabs({
           const map: Record<keyof TabParamList, keyof typeof Ionicons.glyphMap> = {
             Home: "home",
             Flyers: "pricetags",
+            Vouchers: "ticket-outline",
             Card: "card",
             PriceCheck: "barcode-outline",
             Shopping: "basket",
@@ -3191,10 +3307,21 @@ function MainTabs({
         {({ navigation }) => (
           <MoreScreen
             onOpenCard={() => navigation.navigate("Card")}
+            onOpenVouchers={() => navigation.navigate("Vouchers")}
             onOpenLocations={() => navigation.navigate("Locations")}
             onOpenProfile={() => navigation.navigate("Profile")}
           />
         )}
+      </Tab.Screen>
+      <Tab.Screen
+        name="Vouchers"
+        options={{
+          title: t("tab_vouchers"),
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: "none" },
+        }}
+      >
+        {() => <VouchersScreen onLoadVouchers={onLoadLoyaltyVouchers} />}
       </Tab.Screen>
       <Tab.Screen
         name="Card"
@@ -3704,6 +3831,24 @@ export default function App() {
     }
   };
 
+  const handleLoadLoyaltyVouchers = async (): Promise<{ active: LoyaltyVoucher[]; used: LoyaltyVoucher[]; expired: LoyaltyVoucher[] }> => {
+    if (!authToken) return { active: [], used: [], expired: [] };
+    try {
+      const result = await apiGet<{ active?: LoyaltyVoucher[]; used?: LoyaltyVoucher[]; expired?: LoyaltyVoucher[] }>(
+        apiBase,
+        "/loyalty/vouchers",
+        authToken,
+      );
+      return {
+        active: Array.isArray(result?.active) ? result.active : [],
+        used: Array.isArray(result?.used) ? result.used : [],
+        expired: Array.isArray(result?.expired) ? result.expired : [],
+      };
+    } catch {
+      return { active: [], used: [], expired: [] };
+    }
+  };
+
   const handleUpdateProfile = async (name: string, email: string) => {
     if (!authToken) return;
     try {
@@ -3877,6 +4022,7 @@ export default function App() {
                 onDeleteCard={handleDeleteCard}
                 onLoadLoyaltyPurchases={handleLoadLoyaltyPurchases}
                 onLoadLoyaltyPoints={handleLoadLoyaltyPoints}
+                onLoadLoyaltyVouchers={handleLoadLoyaltyVouchers}
                 onCheckPrice={handleCheckPrice}
                 onUpdateProfile={handleUpdateProfile}
                 onChangePassword={handleChangePassword}

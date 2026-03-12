@@ -28,6 +28,24 @@ function mapProductPrice(row) {
   };
 }
 
+function mapVoucher(row) {
+  if (!row) return null;
+  return {
+    barcode: row.barcode,
+    amount: Number(row.amount || 0),
+    status: row.status,
+    source: row.source,
+    assignedUserId: row.assigned_user_id ?? row.assignedUserId ?? "",
+    assignedCardNumber: row.assigned_card_number ?? row.assignedCardNumber ?? "",
+    assignedAt: row.assigned_at ?? row.assignedAt ?? "",
+    expiresAt: row.expires_at ?? row.expiresAt ?? "",
+    usedAt: row.used_at ?? row.usedAt ?? "",
+    usedByCardNumber: row.used_by_card_number ?? row.usedByCardNumber ?? "",
+    createdAt: row.created_at ?? row.createdAt ?? "",
+    updatedAt: row.updated_at ?? row.updatedAt ?? "",
+  };
+}
+
 function readMigrationFiles(engine) {
   const dir = path.join(__dirname, "migrations", engine);
   if (!fs.existsSync(dir)) return [];
@@ -243,6 +261,166 @@ function createSqliteStore(filePath) {
       const result = await run("DELETE FROM product_prices WHERE barcode = ?", [barcode]);
       return Number(result?.changes || 0) > 0;
     },
+    async getVoucherRules() {
+      const row = await get("SELECT * FROM voucher_rules WHERE id = 1 LIMIT 1");
+      if (!row) return null;
+      return {
+        registerAmount: Number(row.register_amount || 0),
+        turnover5000Amount: Number(row.turnover_5000_amount || 0),
+        turnover10000Amount: Number(row.turnover_10000_amount || 0),
+        expiryDays: Number(row.expiry_days || 30),
+        updatedAt: String(row.updated_at || ""),
+      };
+    },
+    async updateVoucherRules(rules) {
+      await run(
+        `INSERT INTO voucher_rules (id, register_amount, turnover_5000_amount, turnover_10000_amount, expiry_days, updated_at)
+         VALUES (1, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           register_amount = excluded.register_amount,
+           turnover_5000_amount = excluded.turnover_5000_amount,
+           turnover_10000_amount = excluded.turnover_10000_amount,
+           expiry_days = excluded.expiry_days,
+           updated_at = excluded.updated_at`,
+        [
+          rules.registerAmount,
+          rules.turnover5000Amount,
+          rules.turnover10000Amount,
+          rules.expiryDays,
+          rules.updatedAt,
+        ],
+      );
+      return this.getVoucherRules();
+    },
+    async insertVoucherIfMissing(voucher) {
+      const result = await run(
+        `INSERT OR IGNORE INTO vouchers
+         (barcode, amount, status, source, created_at, updated_at)
+         VALUES (?, ?, 'free', ?, ?, ?)`,
+        [voucher.barcode, voucher.amount, voucher.source || "upload", voucher.createdAt, voucher.updatedAt],
+      );
+      return Number(result?.changes || 0) > 0;
+    },
+    async getVoucherByBarcode(barcode) {
+      const row = await get("SELECT * FROM vouchers WHERE barcode = ? LIMIT 1", [barcode]);
+      return mapVoucher(row);
+    },
+    async listVouchers(limit = 500, status = "") {
+      const safeLimit = Math.max(1, Math.min(5000, Number(limit) || 500));
+      const normalizedStatus = String(status || "").trim().toLowerCase();
+      const rows = normalizedStatus
+        ? await all("SELECT * FROM vouchers WHERE status = ? ORDER BY created_at DESC, barcode ASC LIMIT ?", [normalizedStatus, safeLimit])
+        : await all("SELECT * FROM vouchers ORDER BY created_at DESC, barcode ASC LIMIT ?", [safeLimit]);
+      return rows.map(mapVoucher);
+    },
+    async listUserVouchers(userId, cardNumber) {
+      const rows = await all(
+        `SELECT * FROM vouchers
+         WHERE (assigned_user_id = ? OR assigned_card_number = ?)
+         ORDER BY
+           CASE status WHEN 'active' THEN 0 WHEN 'used' THEN 1 WHEN 'expired' THEN 2 ELSE 3 END,
+           created_at DESC`,
+        [userId, cardNumber],
+      );
+      return rows.map(mapVoucher);
+    },
+    async listFreeVoucherCandidates(amount, limit = 40) {
+      const safeLimit = Math.max(1, Math.min(500, Number(limit) || 40));
+      const amountValue = Number(amount);
+      const rows = Number.isFinite(amountValue) && amountValue > 0
+        ? await all(
+          "SELECT * FROM vouchers WHERE status = 'free' AND abs(amount - ?) < 0.001 ORDER BY created_at ASC, barcode ASC LIMIT ?",
+          [amountValue, safeLimit],
+        )
+        : await all("SELECT * FROM vouchers WHERE status = 'free' ORDER BY created_at ASC, barcode ASC LIMIT ?", [safeLimit]);
+      return rows.map(mapVoucher);
+    },
+    async assignVoucherByBarcodeIfFree(payload) {
+      const result = await run(
+        `UPDATE vouchers
+         SET status = 'active',
+             source = ?,
+             assigned_user_id = ?,
+             assigned_card_number = ?,
+             assigned_at = ?,
+             expires_at = ?,
+             updated_at = ?
+         WHERE barcode = ? AND status = 'free'`,
+        [
+          payload.source || "manual",
+          payload.userId || "",
+          payload.cardNumber || "",
+          payload.assignedAt,
+          payload.expiresAt,
+          payload.updatedAt,
+          payload.barcode,
+        ],
+      );
+      return Number(result?.changes || 0) > 0;
+    },
+    async markVoucherUsed(barcode, usedAt, cardNumber) {
+      const result = await run(
+        `UPDATE vouchers
+         SET status = 'used',
+             used_at = ?,
+             used_by_card_number = ?,
+             updated_at = ?
+         WHERE barcode = ? AND status = 'active'`,
+        [usedAt, cardNumber || "", usedAt, barcode],
+      );
+      return Number(result?.changes || 0) > 0;
+    },
+    async markExpiredVouchers(nowIso) {
+      await run(
+        `UPDATE vouchers
+         SET status = 'expired', updated_at = ?
+         WHERE status = 'active'
+           AND expires_at IS NOT NULL
+           AND expires_at <> ''
+           AND expires_at < ?`,
+        [nowIso, nowIso],
+      );
+    },
+    async getVoucherStats() {
+      const rows = await all("SELECT status, COUNT(*) AS cnt FROM vouchers GROUP BY status");
+      const stats = { free: 0, active: 0, used: 0, expired: 0, total: 0 };
+      for (const row of rows) {
+        const key = String(row.status || "").toLowerCase();
+        const count = Number(row.cnt || 0);
+        if (key in stats) stats[key] = count;
+        stats.total += count;
+      }
+      return stats;
+    },
+    async addVoucherAudit(entry) {
+      await run(
+        `INSERT INTO voucher_audit (barcode, action, user_id, card_number, amount, note, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          entry.barcode || "",
+          entry.action || "",
+          entry.userId || "",
+          entry.cardNumber || "",
+          Number.isFinite(Number(entry.amount)) ? Number(entry.amount) : null,
+          entry.note || "",
+          entry.createdAt,
+        ],
+      );
+    },
+    async hasVoucherAutoAward(userId, periodYm, ruleKey) {
+      const row = await get(
+        "SELECT id FROM voucher_auto_awards WHERE user_id = ? AND period_ym = ? AND rule_key = ? LIMIT 1",
+        [userId, periodYm, ruleKey],
+      );
+      return Boolean(row);
+    },
+    async createVoucherAutoAward(row) {
+      await run(
+        `INSERT OR IGNORE INTO voucher_auto_awards (user_id, card_number, period_ym, rule_key, barcode, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [row.userId, row.cardNumber, row.periodYm, row.ruleKey, row.barcode || "", row.createdAt],
+      );
+    },
   };
 }
 
@@ -414,6 +592,168 @@ function createPgStore(connectionString) {
     async deleteProductPriceByBarcode(barcode) {
       const r = await q("DELETE FROM product_prices WHERE barcode = $1", [barcode]);
       return Number(r.rowCount || 0) > 0;
+    },
+    async getVoucherRules() {
+      const r = await q("SELECT * FROM voucher_rules WHERE id = 1 LIMIT 1");
+      const row = r.rows[0];
+      if (!row) return null;
+      return {
+        registerAmount: Number(row.register_amount || 0),
+        turnover5000Amount: Number(row.turnover_5000_amount || 0),
+        turnover10000Amount: Number(row.turnover_10000_amount || 0),
+        expiryDays: Number(row.expiry_days || 30),
+        updatedAt: String(row.updated_at || ""),
+      };
+    },
+    async updateVoucherRules(rules) {
+      await q(
+        `INSERT INTO voucher_rules (id, register_amount, turnover_5000_amount, turnover_10000_amount, expiry_days, updated_at)
+         VALUES (1, $1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO UPDATE SET
+           register_amount = EXCLUDED.register_amount,
+           turnover_5000_amount = EXCLUDED.turnover_5000_amount,
+           turnover_10000_amount = EXCLUDED.turnover_10000_amount,
+           expiry_days = EXCLUDED.expiry_days,
+           updated_at = EXCLUDED.updated_at`,
+        [
+          rules.registerAmount,
+          rules.turnover5000Amount,
+          rules.turnover10000Amount,
+          rules.expiryDays,
+          rules.updatedAt,
+        ],
+      );
+      return this.getVoucherRules();
+    },
+    async insertVoucherIfMissing(voucher) {
+      const r = await q(
+        `INSERT INTO vouchers (barcode, amount, status, source, created_at, updated_at)
+         VALUES ($1, $2, 'free', $3, $4, $5)
+         ON CONFLICT (barcode) DO NOTHING`,
+        [voucher.barcode, voucher.amount, voucher.source || "upload", voucher.createdAt, voucher.updatedAt],
+      );
+      return Number(r.rowCount || 0) > 0;
+    },
+    async getVoucherByBarcode(barcode) {
+      const r = await q("SELECT * FROM vouchers WHERE barcode = $1 LIMIT 1", [barcode]);
+      return mapVoucher(r.rows[0]);
+    },
+    async listVouchers(limit = 500, status = "") {
+      const safeLimit = Math.max(1, Math.min(5000, Number(limit) || 500));
+      const normalizedStatus = String(status || "").trim().toLowerCase();
+      const r = normalizedStatus
+        ? await q("SELECT * FROM vouchers WHERE status = $1 ORDER BY created_at DESC, barcode ASC LIMIT $2", [normalizedStatus, safeLimit])
+        : await q("SELECT * FROM vouchers ORDER BY created_at DESC, barcode ASC LIMIT $1", [safeLimit]);
+      return r.rows.map(mapVoucher);
+    },
+    async listUserVouchers(userId, cardNumber) {
+      const r = await q(
+        `SELECT * FROM vouchers
+         WHERE (assigned_user_id = $1 OR assigned_card_number = $2)
+         ORDER BY
+           CASE status WHEN 'active' THEN 0 WHEN 'used' THEN 1 WHEN 'expired' THEN 2 ELSE 3 END,
+           created_at DESC`,
+        [userId, cardNumber],
+      );
+      return r.rows.map(mapVoucher);
+    },
+    async listFreeVoucherCandidates(amount, limit = 40) {
+      const safeLimit = Math.max(1, Math.min(500, Number(limit) || 40));
+      const amountValue = Number(amount);
+      const r = Number.isFinite(amountValue) && amountValue > 0
+        ? await q(
+          "SELECT * FROM vouchers WHERE status = 'free' AND abs(amount - $1) < 0.001 ORDER BY created_at ASC, barcode ASC LIMIT $2",
+          [amountValue, safeLimit],
+        )
+        : await q("SELECT * FROM vouchers WHERE status = 'free' ORDER BY created_at ASC, barcode ASC LIMIT $1", [safeLimit]);
+      return r.rows.map(mapVoucher);
+    },
+    async assignVoucherByBarcodeIfFree(payload) {
+      const r = await q(
+        `UPDATE vouchers
+         SET status = 'active',
+             source = $1,
+             assigned_user_id = $2,
+             assigned_card_number = $3,
+             assigned_at = $4,
+             expires_at = $5,
+             updated_at = $6
+         WHERE barcode = $7 AND status = 'free'`,
+        [
+          payload.source || "manual",
+          payload.userId || "",
+          payload.cardNumber || "",
+          payload.assignedAt,
+          payload.expiresAt,
+          payload.updatedAt,
+          payload.barcode,
+        ],
+      );
+      return Number(r.rowCount || 0) > 0;
+    },
+    async markVoucherUsed(barcode, usedAt, cardNumber) {
+      const r = await q(
+        `UPDATE vouchers
+         SET status = 'used',
+             used_at = $1,
+             used_by_card_number = $2,
+             updated_at = $3
+         WHERE barcode = $4 AND status = 'active'`,
+        [usedAt, cardNumber || "", usedAt, barcode],
+      );
+      return Number(r.rowCount || 0) > 0;
+    },
+    async markExpiredVouchers(nowIso) {
+      await q(
+        `UPDATE vouchers
+         SET status = 'expired', updated_at = $1
+         WHERE status = 'active'
+           AND expires_at IS NOT NULL
+           AND expires_at <> ''
+           AND expires_at < $2`,
+        [nowIso, nowIso],
+      );
+    },
+    async getVoucherStats() {
+      const r = await q("SELECT status, COUNT(*)::int AS cnt FROM vouchers GROUP BY status");
+      const stats = { free: 0, active: 0, used: 0, expired: 0, total: 0 };
+      for (const row of r.rows) {
+        const key = String(row.status || "").toLowerCase();
+        const count = Number(row.cnt || 0);
+        if (key in stats) stats[key] = count;
+        stats.total += count;
+      }
+      return stats;
+    },
+    async addVoucherAudit(entry) {
+      await q(
+        `INSERT INTO voucher_audit (barcode, action, user_id, card_number, amount, note, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          entry.barcode || "",
+          entry.action || "",
+          entry.userId || "",
+          entry.cardNumber || "",
+          Number.isFinite(Number(entry.amount)) ? Number(entry.amount) : null,
+          entry.note || "",
+          entry.createdAt,
+        ],
+      );
+    },
+    async hasVoucherAutoAward(userId, periodYm, ruleKey) {
+      const r = await q(
+        "SELECT id FROM voucher_auto_awards WHERE user_id = $1 AND period_ym = $2 AND rule_key = $3 LIMIT 1",
+        [userId, periodYm, ruleKey],
+      );
+      return Boolean(r.rows[0]);
+    },
+    async createVoucherAutoAward(row) {
+      await q(
+        `INSERT INTO voucher_auto_awards (user_id, card_number, period_ym, rule_key, barcode, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (user_id, period_ym, rule_key) DO NOTHING`,
+        [row.userId, row.cardNumber, row.periodYm, row.ruleKey, row.barcode || "", row.createdAt],
+      );
     },
   };
 }

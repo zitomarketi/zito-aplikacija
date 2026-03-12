@@ -37,7 +37,7 @@
       "versionCode": 1
     },
     "extra": {
-      "apiBase": "http://localhost:8000",
+      "apiBase": "https://zito-cms-backend.onrender.com",
       "eas": {
         "projectId": "bdc208da-9d97-4d04-92bc-792c38d0637c"
       }

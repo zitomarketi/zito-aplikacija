@@ -1,5 +1,13 @@
 ﻿# Latest Changes
 
+## March 12, 2026 - [Android/UI] Top logo clipping fixed (header)
+- Home/app top header:
+  - fixed issue where `zitobaner` logo was clipped into the status bar.
+  - kept logo size and placement intent, adjusted header/logo positioning so the top edge is visible.
+- Delivery:
+  - pushed to `main` (commit `9bf8f5b`).
+  - built and installed fresh Android release APK on connected device.
+
 ## March 10, 2026 - Workflow switch: Android paused, iOS resumed
 - Active direction updated:
   - Android work is paused for now.
@@ -481,3 +489,29 @@
 - Git delivery:
   - `bd7dd40` analytics view in Flyers tab
   - `6caa6dd` native date picker for from/to filters
+
+## March 12, 2026 - [Home/Best Deals] Card layout alignment + wishlist action
+- Updated `Најдобри акции` card layout to match requested product-card arrangement:
+  - 2 cards per row
+  - green price badge with bold white value (without "Super price" text)
+  - wishlist heart moved to top-right corner
+- Added wishlist behavior:
+  - tapping heart adds product to Shopping List
+  - heart is filled when the product already exists in Shopping List
+- Build & delivery:
+  - Android release APK rebuilt
+  - APK installed on physical test device
+- Git delivery:
+  - `c2c9e88` Home best deals: 2-column cards, green price badge, wishlist heart action
+
+## March 12, 2026 - [CMS] Admin redesign save point
+- Updated `backend/public/admin.html`:
+  - sticky top navigation for faster section access
+  - cleaner card grouping in admin layout
+  - removed `Add Flyer` form block
+  - split APK visual catalog into separate cards:
+    - `Тековни летоци`
+    - `Најдобри акции`
+  - removed admin cards:
+    - `Flyers`
+    - `Product Prices`
