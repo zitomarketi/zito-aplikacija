@@ -2606,10 +2606,20 @@ function LocationsScreen() {
 
   const openMaps = async (item: MarketLocation) => {
     const hasCoords = typeof item.lat === "number" && typeof item.lng === "number";
-    const query = hasCoords
-      ? `${item.lat},${item.lng}`
-      : `${item.name} ${item.address} ${item.city} North Macedonia`;
+    const query = hasCoords ? `${item.lat},${item.lng}` : `${item.name} ${item.address} ${item.city} North Macedonia`;
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    if (Platform.OS === "android" && hasCoords) {
+      const geoUrl = `geo:${item.lat},${item.lng}?q=${item.lat},${item.lng}`;
+      try {
+        const supported = await Linking.canOpenURL(geoUrl);
+        if (supported) {
+          await Linking.openURL(geoUrl);
+          return;
+        }
+      } catch {
+        // Fallback to web maps URL.
+      }
+    }
     await Linking.openURL(mapsUrl);
   };
 
@@ -2663,6 +2673,7 @@ function LocationsScreen() {
       setSearchQuery("");
       setNearestKey(`${nearestCity}-${nearest.name}-${nearest.address}`);
       setNearestStatus(`${t("locations_nearest_found")}: ${nearest.name} (${minDistance.toFixed(1)} km)`);
+      await openMaps(nearest);
     } catch {
       setNearestStatus(t("locations_gps_unavailable"));
     }
