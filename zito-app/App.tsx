@@ -2943,11 +2943,12 @@ function ScreenWrap({
   subtitleStyle?: StyleProp<TextStyle>;
 }) {
   const { palette } = useAppTheme();
+  const { t } = useI18n();
   const tabBarHeight = useBottomTabBarHeight();
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}>
       <View style={styles.topBrandBar}>
-        <Image source={logoImage} style={styles.topBrandLogo} resizeMode="contain" />
+        <Text style={styles.topBrandText}>{t("tag_zito")}</Text>
       </View>
       <ScrollView
         contentContainerStyle={[
@@ -3863,16 +3864,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   topBrandBar: {
-    backgroundColor: colors.green,
+    backgroundColor: "#00A651",
     alignItems: "center",
     justifyContent: "center",
     minHeight: 66,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  topBrandLogo: {
-    width: 128,
-    height: 38,
+  topBrandText: {
+    color: "#FFFFFF",
+    fontSize: 34,
+    fontWeight: "900",
+    letterSpacing: 1.4,
   },
   scrollContent: {
     padding: 18,
