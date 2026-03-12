@@ -3870,13 +3870,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#00A651",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 72,
-    paddingHorizontal: 14,
-    paddingBottom: 8,
+    minHeight: 36,
+    paddingHorizontal: 7,
+    paddingBottom: 4,
   },
   topBrandLogo: {
-    width: 603,
-    height: 147,
+    width: 784,
+    height: 191,
     marginTop: -19,
   },
   scrollContent: {
@@ -4230,15 +4230,15 @@ const styles = StyleSheet.create({
   },
   homeTopBrandBar: {
     alignSelf: "stretch",
-    minHeight: 88,
+    minHeight: 44,
     backgroundColor: "#00A651",
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 10,
+    paddingBottom: 5,
   },
   homeTopBrandLogo: {
-    width: 603,
-    height: 147,
+    width: 784,
+    height: 191,
     marginTop: -19,
   },
   homeTopFieldWrap: {
