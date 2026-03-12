@@ -303,6 +303,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     card_loading: "Се вчитува...",
     home_current_flyers: "ТЕКОВНИ ЛЕТОЦИ",
     home_best_deals: "НАЈДОБРИ АКЦИИ",
+    best_deal_super_price: "Супер цена!",
     points: "Поени",
     coupons: "Купони",
     active_suffix: "активни",
@@ -457,6 +458,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     card_loading: "Loading...",
     home_current_flyers: "CURRENT FLYERS",
     home_best_deals: "BEST DEALS",
+    best_deal_super_price: "Super price!",
     points: "Points",
     coupons: "Coupons",
     active_suffix: "active",
@@ -611,6 +613,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     card_loading: "Duke ngarkuar...",
     home_current_flyers: "LETËR NJOFTIME AKTIVE",
     home_best_deals: "AKSIONET MË TË MIRA",
+    best_deal_super_price: "Super cmim!",
     points: "Pikë",
     coupons: "Kuponë",
     active_suffix: "aktive",
@@ -765,6 +768,7 @@ const I18N: Record<LanguageCode, Record<string, string>> = {
     card_loading: "Yukleniyor...",
     home_current_flyers: "GUNCEL BROSURLER",
     home_best_deals: "EN IYI AKSIYONLAR",
+    best_deal_super_price: "Super fiyat!",
     points: "Puanlar",
     coupons: "Kuponlar",
     active_suffix: "aktif",
@@ -1529,14 +1533,31 @@ function HomeScreen({
                 {row.map((item) => (
                   <Pressable
                     key={item.id}
-                    style={[styles.bestDealCard, { backgroundColor: palette.card }]}
+                    style={[styles.bestDealCard, { backgroundColor: "#F8F8F8" }]}
                     onPress={() => void openBestDeal(item)}
                   >
-                    {item.image ? (
-                      <Image source={item.image} style={styles.bestDealImage} resizeMode="cover" />
-                    ) : item.imageUrl ? (
-                      <Image source={{ uri: item.imageUrl }} style={styles.bestDealImage} resizeMode="cover" />
-                    ) : null}
+                    <View style={styles.bestDealImageWrap}>
+                      {item.image ? (
+                        <Image source={item.image} style={styles.bestDealImage} resizeMode="contain" />
+                      ) : item.imageUrl ? (
+                        <Image source={{ uri: item.imageUrl }} style={styles.bestDealImage} resizeMode="contain" />
+                      ) : null}
+                    </View>
+                    <View style={styles.bestDealInfoWrap}>
+                      <Text numberOfLines={2} style={styles.bestDealName}>
+                        {item.title}
+                      </Text>
+                      <Text numberOfLines={1} style={styles.bestDealSub}>
+                        {item.price || "Акција"}
+                      </Text>
+                      <View style={styles.bestDealBottomRow}>
+                        <View style={styles.bestDealBadgeWrap}>
+                          <Text style={styles.bestDealBadgeTop}>{t("best_deal_super_price")}</Text>
+                          <Text style={styles.bestDealBadgePrice}>{item.price || "АКЦИЈА"}</Text>
+                        </View>
+                        <Ionicons name="heart-outline" size={23} color="#67B948" />
+                      </View>
+                    </View>
                   </Pressable>
                 ))}
               </View>
@@ -1755,8 +1776,13 @@ function FlyersScreen({
   }, [card.cardNumber, onLoadPurchases, onLoadPoints]);
 
   const filteredPurchases = useMemo(() => {
-    const from = dateFrom.trim();
-    const to = dateTo.trim();
+    const fromInput = dateFrom.trim();
+    const toInput = dateTo.trim();
+    const now = new Date();
+    const monthStartKey = formatDateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+    const todayKey = formatDateKey(now);
+    const from = fromInput || monthStartKey;
+    const to = toInput || todayKey;
     return allPurchases.filter((item) => {
       const key = normalizePurchaseDate(item.datumSka);
       if (!key) return false;
@@ -4346,12 +4372,22 @@ const styles = StyleSheet.create({
   },
   bestDealCard: {
     width: "31.8%",
-    aspectRatio: 1,
-    borderRadius: 10,
-    padding: 0,
-    justifyContent: "center",
+    borderRadius: 12,
+    padding: 8,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: "#E0E0E0",
+    overflow: "hidden",
+    minHeight: 210,
+    justifyContent: "space-between",
+  },
+  bestDealImageWrap: {
+    height: 105,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#ECECEC",
+    alignItems: "center",
+    justifyContent: "center",
     overflow: "hidden",
   },
   bestDealImage: {
@@ -4359,16 +4395,50 @@ const styles = StyleSheet.create({
     height: "100%",
     alignSelf: "center",
   },
-  bestDealTitle: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-    lineHeight: 16,
+  bestDealInfoWrap: {
+    marginTop: 8,
+    gap: 2,
   },
-  bestDealPrice: {
-    color: "#FFFFFF",
+  bestDealName: {
+    color: "#4A4A4A",
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "800",
+    lineHeight: 17,
+  },
+  bestDealSub: {
+    color: "#7A7A7A",
+    fontSize: 12,
+    fontWeight: "600",
+    minHeight: 16,
+  },
+  bestDealBottomRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  bestDealBadgeWrap: {
+    backgroundColor: "#EF2B2D",
+    borderRadius: 4,
+    overflow: "hidden",
+    minWidth: 58,
+  },
+  bestDealBadgeTop: {
+    backgroundColor: "#FFE100",
+    color: "#232323",
+    fontSize: 10,
+    fontWeight: "900",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  bestDealBadgePrice: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: "900",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
   },
   flyerCard: {
     flex: 1,
