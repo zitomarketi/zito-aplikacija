@@ -1,4 +1,17 @@
-﻿# Latest Changes
+# Latest Changes
+
+## March 13, 2026 - [UI/Light theme] White backgrounds kept, green header preserved
+- Updated mobile light theme surfaces to use white backgrounds instead of tinted light green/gray blocks:
+  - inputs
+  - secondary buttons/cards
+  - barcode container
+  - notification media/PDF placeholders
+  - location map button background
+- Preserved the existing green top header bar as requested.
+- Delivery:
+  - built fresh Android release APK
+  - installed successfully on connected device
+  - pushed to `main` (commit `9eae3cf`)
 
 ## March 10, 2026 - Workflow switch: Android paused, iOS resumed
 - Active direction updated:
@@ -36,7 +49,7 @@
 ## March 9, 2026 - [Backend/CMS] Admin Visual Catalog UX simplification (Add new + Upload + Delete)
 - Updated `backend/public/admin.html` visual catalog controls:
   - removed `Import URL` actions from both groups
-  - renamed top action to `Add new` for both `летоци` and `акции`
+  - renamed top action to `Add new` for both `??????` and `?????`
   - each card now shows:
     - `Upload` (replace with local file browser)
     - `Delete` (remove asset)
@@ -79,7 +92,7 @@
 
 ## March 5, 2026 - Login language selector on first screen
 - Added language switch buttons (flag chips) at the bottom of the Login/Register screen.
-- Supported quick language switch: Macedonian (`🇲🇰`), English (`🇬🇧`), Albanian (`🇦🇱`), Turkish (`🇹🇷`).
+- Supported quick language switch: Macedonian (`????`), English (`????`), Albanian (`????`), Turkish (`????`).
 - Login screen now updates language immediately when user taps a flag.
 - Added translated `email_placeholder` in all supported languages and connected email input to i18n key.
 - Wired `LoginScreen` props with global language state:
@@ -146,7 +159,7 @@
   - User-confirmed UI result is now correct.
 
 ## March 6, 2026 - Shopping List module added
-- Added a new bottom tab: `Листа` / `Shopping`.
+- Added a new bottom tab: `?????` / `Shopping`.
 - Implemented full shopping list screen:
   - add item (`name`, `quantity`, `note`)
   - mark item as purchased (checkbox toggle)
@@ -174,8 +187,8 @@
   - Need to build custom admin panel, or use temporary ready-made admin tools first.
 
 ## March 6, 2026 - Card screen barcode scan (camera) + backend card update
-- Added barcode scanning to `Картичка` screen using phone camera (`expo-camera` flow).
-  - New scan action on card screen: "Скенирај баркод со камера".
+- Added barcode scanning to `????????` screen using phone camera (`expo-camera` flow).
+  - New scan action on card screen: "???????? ?????? ?? ??????".
   - Scanner supports: `ean13`, `ean8`, `code128`, `code39`, `upc_a`, `upc_e`, `itf14`.
 - Added backend endpoint for card update:
   - `POST /me/card` (auth required)
@@ -194,7 +207,7 @@
   - Column `C` -> GPS coordinates (`lat`, `lng`)
   - Column `D` -> settlement/city value for grouping
 - Fixed `market_locations.json` text encoding issues (removed mojibake/corrupted Cyrillic values).
-- Confirmed key entries now carry coordinates in app data (including `Битола`, `Битола 2`, `Битола 3`, `Валандово`).
+- Confirmed key entries now carry coordinates in app data (including `??????`, `?????? 2`, `?????? 3`, `?????????`).
 - Forced fresh JS rebundle in release build to ensure updated JSON is packaged.
 - Installed updated APK on physical device; user confirmed locations now display correctly.
 
@@ -208,10 +221,10 @@
 - Built and installed updated APK on physical device for validation.
 
 ## March 6, 2026 - Notifications tab blink indicator + More header cleanup
-- Removed the large `More` page title from the `Повеќе` screen header area while keeping the bottom tab item intact.
-- Added unread visual indicator for `Известувања` tab icon:
+- Removed the large `More` page title from the `??????` screen header area while keeping the bottom tab item intact.
+- Added unread visual indicator for `???????????` tab icon:
   - icon now blinks when new notifications arrive
-  - blinking stops when user opens the `Известувања` tab (marks as read in UI state)
+  - blinking stops when user opens the `???????????` tab (marks as read in UI state)
 - Added temporary dummy in-app notification trigger on login to quickly validate blinking behavior during testing.
 - Validated TypeScript (`npx tsc --noEmit`), built release APK, and installed on physical device.
 
@@ -393,7 +406,7 @@
   - commits on `main`: `7314c65`, `3a8f235`, `6efade1`, `f01b825`
 
 ## March 9, 2026 - [Mobile/Home] In-app PDF popup + first-page visual preview
-- Home screen (`Тековни летоци`) now consumes CMS gallery data and includes PDF flyers.
+- Home screen (`??????? ??????`) now consumes CMS gallery data and includes PDF flyers.
 - Added in-app PDF viewing flow (no external browser redirect):
   - tapping a PDF flyer opens a fullscreen modal viewer inside the app.
 - Added visual PDF card preview on Home carousel:
@@ -460,18 +473,18 @@
   - when `false`, app does not block card save on temporary loyalty-service verify failures.
 - Added card unlink capability:
   - new backend route: `DELETE /me/card`
-  - mobile card screen now has `Избриши картичка` button to clear linked card.
+  - mobile card screen now has `??????? ????????` button to clear linked card.
 - Git delivery:
   - `64170a5` soft-verify when loyalty service unavailable
   - `1b34fb8` REST param mapping + credential templates
   - `bf5c883` delete card action (backend + app)
 
 ## March 11, 2026 - [Mobile/Flyers tab] Replaced leaflets with purchase analytics
-- `Летоци` tab was redesigned into analytics dashboard based on loyalty purchases:
+- `??????` tab was redesigned into analytics dashboard based on loyalty purchases:
   - totals: spent amount, quantity, receipt count, points
   - purchase list with date/qty/value/category
   - category breakdown with pie chart visualization
-  - date filtering (`Од`/`До`) for period analysis
+  - date filtering (`??`/`??`) for period analysis
 - Added native date picker UX for selecting date range:
   - dependency: `@react-native-community/datetimepicker`
   - Expo plugin registered in `app.config.js`
@@ -496,3 +509,4 @@
   - App launches directly (non-dev client build)
 - Deployment note:
   - Render backend should be updated with `Manual Deploy -> Deploy latest commit` from `main`.
+
