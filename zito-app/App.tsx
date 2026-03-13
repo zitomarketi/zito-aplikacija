@@ -1510,7 +1510,7 @@ function HomeScreen({
                   {isPdf && targetUrl ? (
                     <View style={styles.currentFlyerPdfCard}>
                       {thumbUrl ? (
-                        <Image source={{ uri: thumbUrl }} style={styles.currentFlyerPdfWebView} resizeMode="contain" />
+                        <Image source={{ uri: thumbUrl }} style={styles.currentFlyerPdfWebView} resizeMode="cover" />
                       ) : (
                         <Pdf
                           source={{ uri: pdfUri, cache: true }}
@@ -1527,7 +1527,7 @@ function HomeScreen({
                       </View>
                     </View>
                   ) : imageSource ? (
-                    <Image source={imageSource} style={styles.currentFlyerImage} resizeMode="contain" />
+                    <Image source={imageSource} style={styles.currentFlyerImage} resizeMode="cover" />
                   ) : (
                     <View style={styles.currentFlyerPdfCard}>
                       <Text style={styles.currentFlyerPdfLabel}>No Image</Text>
