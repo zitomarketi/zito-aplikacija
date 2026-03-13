@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>???? ?????</title>
+    <title>Жито Админ</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -171,137 +171,137 @@
   <body>
     <div class="page">
       <div class="topbar">
-        <h1>???? ????? ?????</h1>
+        <h1>Жито Админ Панел</h1>
         <div class="nav-tabs">
-          <button type="button" onclick="scrollToSection('sec-auth')">??????</button>
-          <button type="button" onclick="scrollToSection('sec-notification-create')">???????????</button>
-          <button type="button" onclick="scrollToSection('sec-push')">???</button>
+          <button type="button" onclick="scrollToSection('sec-auth')">Најава</button>
+          <button type="button" onclick="scrollToSection('sec-notification-create')">Известувања</button>
+          <button type="button" onclick="scrollToSection('sec-push')">Пуш</button>
           <button type="button" onclick="scrollToSection('sec-apk')">APK</button>
-          <button type="button" onclick="scrollToSection('sec-vouchers')">???????</button>
-          <button type="button" onclick="scrollToSection('sec-logs')">??????</button>
+          <button type="button" onclick="scrollToSection('sec-vouchers')">Ваучери</button>
+          <button type="button" onclick="scrollToSection('sec-logs')">Логови</button>
         </div>
       </div>
       <div class="split">
     <div class="card" id="sec-auth">
-      <label>????? ?????</label>
-      <input id="token" value="" placeholder="????? ????? ????? ?? environment" />
+      <label>Админ токен</label>
+      <input id="token" value="" placeholder="Внеси админ токен од environment" />
       <div class="token-actions">
-        <button type="button" onclick="saveToken()">??????? ?????</button>
-        <button type="button" class="btn-danger" onclick="logout()">??????</button>
+        <button type="button" onclick="saveToken()">Зачувај токен</button>
+        <button type="button" class="btn-danger" onclick="logout()">Одјава</button>
       </div>
     </div>
 
     <div class="card" id="sec-notification-create">
-      <h3>???????????</h3>
+      <h3>Известувања</h3>
       <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 10px; margin-bottom: 10px">
-        <strong>?????????? ??????</strong>
-        <input id="noteTitle" placeholder="??????" />
-        <input id="noteBody" placeholder="????????" />
-        <button onclick="addNotification()">??????? ?????????? ???????????</button>
+        <strong>Текстуална порака</strong>
+        <input id="noteTitle" placeholder="Наслов" />
+        <input id="noteBody" placeholder="Содржина" />
+        <button onclick="addNotification()">Зачувај текстуално известување</button>
       </div>
       <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 10px">
-        <strong>??????? ?????/PDF</strong>
-        <input id="noteMediaTitle" placeholder="?????? (??????????)" />
-        <input id="noteMediaBody" placeholder="???????? (??????????)" />
-        <button type="button" onclick="openNotificationUpload()">??????? ????</button>
+        <strong>Прикачи слика/PDF</strong>
+        <input id="noteMediaTitle" placeholder="Наслов (опционално)" />
+        <input id="noteMediaBody" placeholder="Содржина (опционално)" />
+        <button type="button" onclick="openNotificationПрикачи()">Прикачи фајл</button>
       </div>
     </div>
 
     <div class="card" id="sec-push">
-      <h3>??? ?????? ?? ????</h3>
-      <input id="pushTitle" placeholder="??????" />
-      <input id="pushBody" placeholder="????????" />
-      <button onclick="sendPush()">??????? ???</button>
+      <h3>Пуш порака до сите</h3>
+      <input id="pushTitle" placeholder="Наслов" />
+      <input id="pushBody" placeholder="Содржина" />
+      <button onclick="sendPush()">Испрати пуш</button>
     </div>
 
     <div class="card full" id="sec-notifications">
       <div class="section-head">
-        <h3>???????????</h3>
-        <button onclick="loadNotifications()">??????</button>
+        <h3>Известувања</h3>
+        <button onclick="loadNotifications()">Освежи</button>
       </div>
       <div id="notificationsList"></div>
     </div>
 
     <div class="card full" id="sec-apk">
       <div class="section-head">
-        <h3>APK ???????? ???????</h3>
-        <button onclick="loadApkGallery()">??????</button>
+        <h3>APK визуелен каталог</h3>
+        <button onclick="loadApkGallery()">Освежи</button>
       </div>
     </div>
 
     <div class="card full" id="sec-apk-flyers">
-      <h4>??????? ??????</h4>
+      <h4>Тековни летоци</h4>
       <div class="gallery-actions">
-        <button type="button" onclick="openNewUpload('letoci')">????? ???? (??????)</button>
+        <button type="button" onclick="openNewПрикачи('letoci')">Додај ново (летоци)</button>
       </div>
       <div id="apkCurrentFlyers" class="gallery-grid"></div>
     </div>
 
     <div class="card full" id="sec-apk-deals">
-      <h4 style="margin-top: 16px">???????? ?????</h4>
+      <h4 style="margin-top: 16px">Најдобри акции</h4>
       <div class="gallery-actions">
-        <button type="button" onclick="openNewUpload('akcii')">????? ???? (?????)</button>
+        <button type="button" onclick="openNewПрикачи('akcii')">Додај ново (акции)</button>
       </div>
       <div id="apkBestDeals" class="gallery-grid"></div>
     </div>
 
     <div class="card full" id="sec-home-top">
       <div class="section-head">
-        <h3>????? ???? ?? ??????? (??? ??????)</h3>
-        <button onclick="loadHomeTopField()">??????</button>
+        <h3>Горно поле на почетна (над летоци)</h3>
+        <button onclick="loadHomeTopField()">Освежи</button>
       </div>
       <div class="gallery-actions">
-        <button type="button" onclick="openHomeTopUpload()">??????? ?????</button>
-        <button type="button" class="btn-danger" onclick="deleteHomeTopField()">???????</button>
+        <button type="button" onclick="openHomeTopПрикачи()">Прикачи слика</button>
+        <button type="button" class="btn-danger" onclick="deleteHomeTopField()">Избриши</button>
       </div>
       <div id="homeTopFieldPreview" class="gallery-grid"></div>
     </div>
 
     <div class="card full" id="sec-vouchers">
       <div class="section-head">
-        <h3>???? ?? ???????</h3>
-        <button type="button" onclick="loadVoucherSummary(); loadVoucherList()">??????</button>
+        <h3>Увоз на ваучери</h3>
+        <button type="button" onclick="loadVoucherSummary(); loadVoucherList()">Освежи</button>
       </div>
       <div class="gallery-actions">
-        <button type="button" onclick="openVoucherImport()">??????? Excel (.xls/.xlsx)</button>
+        <button type="button" onclick="openVoucherImport()">Прикачи Excel (.xls/.xlsx)</button>
       </div>
       <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 12px; margin-bottom: 12px">
-        <strong>????? ?????????? ?? loyalty ????????</strong>
-        <input id="voucherAssignCardNumber" placeholder="???? ?? loyalty ????????" />
-        <input id="voucherAssignBarcode" placeholder="?????? ?? ?????? (?????????? - ?????? ?? ?????? ????????)" />
-        <input id="voucherAssignValidDays" type="number" min="1" max="3650" value="30" placeholder="?????? ?? ???????" />
-        <button type="button" onclick="assignVoucherManually()">?????? ??????</button>
+        <strong>Рачно доделување по loyalty картичка</strong>
+        <input id="voucherAssignCardNumber" placeholder="Број на loyalty картичка" />
+        <input id="voucherAssignBarcode" placeholder="Баркод на ваучер (опционално - празно за првиот слободен)" />
+        <input id="voucherAssignValidDays" type="number" min="1" max="3650" value="30" placeholder="Денови на важност" />
+        <button type="button" onclick="assignVoucherManually()">Додели ваучер</button>
       </div>
       <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 12px; margin-bottom: 12px">
-        <strong>????????? ??????</strong>
-        <input id="voucherRedeemBarcode" placeholder="?????? ?? ??????" />
-        <input id="voucherRedeemCardNumber" placeholder="???? ?? loyalty ???????? (?????????? ????????)" />
-        <input id="voucherRedeemReference" placeholder="????????? / ?????? / ??????? (??????????)" />
-        <button type="button" onclick="redeemVoucher()">????????? ??????</button>
+        <strong>Искористи ваучер</strong>
+        <input id="voucherRedeemBarcode" placeholder="Баркод на ваучер" />
+        <input id="voucherRedeemCardNumber" placeholder="Број на loyalty картичка (опционална проверка)" />
+        <input id="voucherRedeemReference" placeholder="Референца / сметка / белешка (опционално)" />
+        <button type="button" onclick="redeemVoucher()">Искористи ваучер</button>
       </div>
       <div style="border: 1px solid #e3e3e3; border-radius: 10px; padding: 12px; margin-bottom: 12px">
-        <strong>??????? ?? ???????</strong>
-        <div class="meta" style="margin: 8px 0 6px 0">?????? ??? ????????????</div>
-        <label><input id="ruleSignupEnabled" type="checkbox" style="width:auto;margin-right:8px" /> ???????? ?????? ??? ????????????</label>
-        <input id="ruleSignupAmount" type="number" min="0" step="0.01" placeholder="????? ?? ?????? ??? ????????????" />
-        <input id="ruleSignupValidDays" type="number" min="1" max="3650" placeholder="?????? ?? ??????? ?? ????????????" />
-        <div class="meta" style="margin: 8px 0 6px 0">??????? ?????? > 5000</div>
-        <label><input id="ruleMonthly5000Enabled" type="checkbox" style="width:auto;margin-right:8px" /> ???????? ??????? ?? 5000</label>
-        <input id="ruleMonthly5000Amount" type="number" min="0" step="0.01" placeholder="????? ?? ?????? ?? >5000" />
-        <input id="ruleMonthly5000ValidDays" type="number" min="1" max="3650" placeholder="?????? ?? ??????? ?? >5000" />
-        <div class="meta" style="margin: 8px 0 6px 0">??????? ?????? > 10000</div>
-        <label><input id="ruleMonthly10000Enabled" type="checkbox" style="width:auto;margin-right:8px" /> ???????? ??????? ?? 10000</label>
-        <input id="ruleMonthly10000Amount" type="number" min="0" step="0.01" placeholder="????? ?? ?????? ?? >10000" />
-        <input id="ruleMonthly10000ValidDays" type="number" min="1" max="3650" placeholder="?????? ?? ??????? ?? >10000" />
-        <button type="button" onclick="saveVoucherRules()">??????? ???????</button>
+        <strong>Правила за ваучери</strong>
+        <div class="meta" style="margin: 8px 0 6px 0">Ваучер при регистрација</div>
+        <label><input id="ruleSignupEnabled" type="checkbox" style="width:auto;margin-right:8px" /> Овозможи ваучер при регистрација</label>
+        <input id="ruleSignupAmount" type="number" min="0" step="0.01" placeholder="Износ на ваучер при регистрација" />
+        <input id="ruleSignupValidDays" type="number" min="1" max="3650" placeholder="Денови на важност за регистрација" />
+        <div class="meta" style="margin: 8px 0 6px 0">Месечен промет > 5000</div>
+        <label><input id="ruleMonthly5000Enabled" type="checkbox" style="width:auto;margin-right:8px" /> Овозможи правило за 5000</label>
+        <input id="ruleMonthly5000Amount" type="number" min="0" step="0.01" placeholder="Износ на ваучер за >5000" />
+        <input id="ruleMonthly5000ValidDays" type="number" min="1" max="3650" placeholder="Денови на важност за >5000" />
+        <div class="meta" style="margin: 8px 0 6px 0">Месечен промет > 10000</div>
+        <label><input id="ruleMonthly10000Enabled" type="checkbox" style="width:auto;margin-right:8px" /> Овозможи правило за 10000</label>
+        <input id="ruleMonthly10000Amount" type="number" min="0" step="0.01" placeholder="Износ на ваучер за >10000" />
+        <input id="ruleMonthly10000ValidDays" type="number" min="1" max="3650" placeholder="Денови на важност за >10000" />
+        <button type="button" onclick="saveVoucherRules()">Зачувај правила</button>
       </div>
-      <div id="voucherSummary" class="meta" style="margin-bottom: 12px">???? ??????? ???????? ?? ???????.</div>
+      <div id="voucherSummary" class="meta" style="margin-bottom: 12px">Нема вчитани податоци за ваучери.</div>
       <div id="voucherList"></div>
     </div>
 
       </div>
     <div id="sec-logs">
-      <pre id="out" style="margin-bottom: 14px">??????????.</pre>
+      <pre id="out" style="margin-bottom: 14px">Подготвено.</pre>
     </div>
     </div>
     <input id="galleryFileInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" style="display: none" />
@@ -342,7 +342,7 @@
       const ruleMonthly10000Enabled = document.getElementById("ruleMonthly10000Enabled");
       const ruleMonthly10000Amount = document.getElementById("ruleMonthly10000Amount");
       const ruleMonthly10000ValidDays = document.getElementById("ruleMonthly10000ValidDays");
-      let pendingUploadTarget = null;
+      let pendingПрикачиTarget = null;
       if (window.pdfjsLib) {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
       }
@@ -374,17 +374,17 @@
       function saveToken() {
         const value = tokenInput.value.trim();
         if (!value) {
-          out.textContent = "????? ??????? ? ??????.";
+          out.textContent = "Админ токенот е празен.";
           return;
         }
         localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, value);
-        out.textContent = "????? ??????? ? ??????? ?? ???? ???????????.";
+        out.textContent = "Админ токенот е зачуван во овој прелистувач.";
       }
 
       function logout() {
         localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
         tokenInput.value = "";
-        out.textContent = "?????????? ????? ????? ? ?????????.";
+        out.textContent = "Зачуваниот админ токен е отстранет.";
       }
 
       async function call(path, body) {
@@ -398,7 +398,7 @@
         return res.ok;
       }
 
-      async function callUpload(path, body) {
+      async function callПрикачи(path, body) {
         const headers = {
           "Content-Type": "application/json",
           "x-admin-token": tokenInput.value.trim(),
@@ -413,7 +413,7 @@
         return res.ok;
       }
 
-      async function callDelete(path) {
+      async function callИзбриши(path) {
         const res = await fetch(base + path, {
           method: "DELETE",
           headers: adminHeaders(),
@@ -462,7 +462,7 @@
         }
       }
 
-      function openNotificationUpload() {
+      function openNotificationПрикачи() {
         notificationFileInput.click();
       }
 
@@ -475,7 +475,7 @@
           const allowedMime = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
           const allowedExt = ["png", "jpg", "jpeg", "webp", "pdf"];
           if (!allowedMime.includes(mimeType) && !allowedExt.includes(ext)) {
-            out.textContent = "????????? ?? ???? PNG/JPG/WEBP/PDF ???????.";
+            out.textContent = "Поддржани се само PNG/JPG/WEBP/PDF фајлови.";
             return;
           }
 
@@ -483,7 +483,7 @@
           const thumbnailBase64 = await buildPdfThumbnailBase64(file);
           const title = document.getElementById("noteMediaTitle").value.trim();
           const body = document.getElementById("noteMediaBody").value.trim();
-          const ok = await callUpload("/admin/notifications/upload", {
+          const ok = await callПрикачи("/admin/notifications/upload", {
             title,
             body,
             fileName: file.name,
@@ -498,7 +498,7 @@
             await loadNotifications();
           }
         } catch (error) {
-          out.textContent = String(error?.message || error || "????????????? ?? ??????????? ?? ?????.");
+          out.textContent = String(error?.message || error || "Прикачувањето на известување не успеа.");
         } finally {
           notificationFileInput.value = "";
         }
@@ -525,11 +525,11 @@
                 <div class="meta">ID: ${escapeHtml(x.id)}</div>
                 ${x.image ? `<div class="meta">URL: <a href="${escapeHtml(x.image)}" target="_blank" rel="noopener noreferrer">${escapeHtml(x.image)}</a></div>` : ""}
               </div>
-              <button class="btn-danger" onclick="deleteFlyer('${escapeHtml(x.id)}')">???????</button>
+              <button class="btn-danger" onclick="deleteFlyer('${escapeHtml(x.id)}')">Избриши</button>
             </div>`,
               )
               .join("")
-          : "<div class='meta'>???? ??????</div>";
+          : "<div class='meta'>Нема летоци</div>";
       }
 
       async function loadNotifications() {
@@ -543,16 +543,16 @@
               <div>
                 <div><strong>${escapeHtml(x.title)}</strong></div>
                 ${x.body ? `<div>${escapeHtml(x.body)}</div>` : ""}
-                ${x.mediaUrl ? `<div class="meta">??????: <a href="${escapeHtml(x.mediaUrl)}" target="_blank" rel="noopener noreferrer">?????? ????</a></div>` : ""}
-                ${x.thumbnailUrl ? `<div class="meta">????????: <a href="${escapeHtml(x.thumbnailUrl)}" target="_blank" rel="noopener noreferrer">?????? ????????</a></div>` : ""}
-                <div class="meta">???: ${escapeHtml(x.kind || "text")}</div>
+                ${x.mediaUrl ? `<div class="meta">Медиум: <a href="${escapeHtml(x.mediaUrl)}" target="_blank" rel="noopener noreferrer">Отвори фајл</a></div>` : ""}
+                ${x.thumbnailUrl ? `<div class="meta">Сличка: <a href="${escapeHtml(x.thumbnailUrl)}" target="_blank" rel="noopener noreferrer">Отвори сличка</a></div>` : ""}
+                <div class="meta">Тип: ${escapeHtml(x.kind || "text")}</div>
                 <div class="meta">ID: ${escapeHtml(x.id)}</div>
               </div>
-              <button class="btn-danger" onclick="deleteNotification('${escapeHtml(x.id)}')">???????</button>
+              <button class="btn-danger" onclick="deleteNotification('${escapeHtml(x.id)}')">Избриши</button>
             </div>`,
               )
               .join("")
-          : "<div class='meta'>???? ???????????</div>";
+          : "<div class='meta'>Нема известувања</div>";
       }
 
       async function loadPrices() {
@@ -566,13 +566,13 @@
             <div class="row">
               <div>
                 <div><strong>${escapeHtml(x.name)}</strong> - ${escapeHtml(x.price)} ${escapeHtml(x.currency || "")}</div>
-                <div class="meta">??????: ${escapeHtml(x.barcode)}${x.unit ? ` | ???????: ${escapeHtml(x.unit)}` : ""}</div>
+                <div class="meta">Баркод: ${escapeHtml(x.barcode)}${x.unit ? ` | Единица: ${escapeHtml(x.unit)}` : ""}</div>
               </div>
-              <button class="btn-danger" onclick="deletePrice('${escapeHtml(x.barcode)}')">???????</button>
+              <button class="btn-danger" onclick="deletePrice('${escapeHtml(x.barcode)}')">Избриши</button>
             </div>`,
               )
               .join("")
-          : "<div class='meta'>???? ???? ?? ?????????</div>";
+          : "<div class='meta'>Нема цени на производи</div>";
       }
 
       function renderGallery(target, items) {
@@ -584,13 +584,13 @@
                   const isPdf = lowerFile.endsWith(".pdf");
                   const preview = isPdf && item.thumbnailUrl
                     ? `<img src="${escapeHtml(item.thumbnailUrl)}" alt="${escapeHtml(item.label)}" loading="lazy"
-                        onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')" />`
+                        onclick="openReplaceПрикачи('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')" />`
                     : isPdf
                     ? `<div class="gallery-pdf">PDF</div>`
                     : `<img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.label)}" loading="lazy"
-                        onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')" />`;
+                        onclick="openReplaceПрикачи('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')" />`;
                   const openPdfBtn = isPdf
-                    ? `<button type="button" style="margin-top:6px" onclick="window.open('${escapeHtml(item.imageUrl)}','_blank','noopener,noreferrer')">?????? PDF</button>`
+                    ? `<button type="button" style="margin-top:6px" onclick="window.open('${escapeHtml(item.imageUrl)}','_blank','noopener,noreferrer')">Отвори PDF</button>`
                     : "";
                   return `
             <div class="gallery-item">
@@ -598,13 +598,13 @@
               <div class="gallery-label">${escapeHtml(item.label)}</div>
               <div class="gallery-file">${escapeHtml(item.file)}</div>
               ${openPdfBtn}
-              <button type="button" style="margin-top:6px" onclick="openReplaceUpload('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">???????</button>
-              <button type="button" class="btn-danger" style="margin-top:6px" onclick="deleteGalleryItem('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">???????</button>
+              <button type="button" style="margin-top:6px" onclick="openReplaceПрикачи('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">Прикачи</button>
+              <button type="button" class="btn-danger" style="margin-top:6px" onclick="deleteGalleryItem('${escapeHtml(item.group || "")}','${escapeHtml(item.file)}')">Избриши</button>
             </div>`;
                 },
               )
               .join("")
-          : "<div class='meta'>?? ?? ??????? ?????</div>";
+          : "<div class='meta'>Не се најдени слики</div>";
       }
 
       async function loadApkGallery() {
@@ -621,7 +621,7 @@
         if (!data) return;
         const item = data.item || null;
         if (!item || !item.imageUrl) {
-          homeTopFieldPreview.innerHTML = "<div class='meta'>???? ????????? ????</div>";
+          homeTopFieldPreview.innerHTML = "<div class='meta'>Нема прикачено поле</div>";
           return;
         }
         homeTopFieldPreview.innerHTML = `
@@ -636,12 +636,12 @@
         const data = await callGet("/admin/vouchers/summary");
         if (!data || !voucherSummary) return;
         voucherSummary.innerHTML = `
-          <strong>??????:</strong> ${escapeHtml(data.total)} |
-          <strong>????????:</strong> ${escapeHtml(data.free)} |
-          <strong>????????:</strong> ${escapeHtml(data.assigned)} |
-          <strong>???????????:</strong> ${escapeHtml(data.used)} |
-          <strong>????????:</strong> ${escapeHtml(data.expired)} |
-          <strong>?????????:</strong> ${escapeHtml(data.void)}
+          <strong>Вкупно:</strong> ${escapeHtml(data.total)} |
+          <strong>Слободни:</strong> ${escapeHtml(data.free)} |
+          <strong>Доделени:</strong> ${escapeHtml(data.assigned)} |
+          <strong>Искористени:</strong> ${escapeHtml(data.used)} |
+          <strong>Истечени:</strong> ${escapeHtml(data.expired)} |
+          <strong>Поништени:</strong> ${escapeHtml(data.void)}
         `;
       }
 
@@ -655,13 +655,13 @@
             <div class="row">
               <div>
                 <div><strong>${escapeHtml(x.barcode)}</strong> - ${escapeHtml(x.amount)} ${escapeHtml(x.currency || "MKD")}</div>
-                <div class="meta">??????: ${escapeHtml(x.status)} | Batch: ${escapeHtml(x.importBatchId || "-")}</div>
-                <div class="meta">?????: ${escapeHtml(x.sourceFile || "-")}</div>
+                <div class="meta">Статус: ${escapeHtml(x.status)} | Batch: ${escapeHtml(x.importBatchId || "-")}</div>
+                <div class="meta">Извор: ${escapeHtml(x.sourceFile || "-")}</div>
               </div>
             </div>`,
               )
               .join("")
-          : "<div class='meta'>???? ??????? ???????</div>";
+          : "<div class='meta'>Нема увезени ваучери</div>";
       }
 
       async function assignVoucherManually() {
@@ -736,11 +736,11 @@
           if (!file) return;
           const lowerName = String(file.name || "").toLowerCase();
           if (!lowerName.endsWith(".xls") && !lowerName.endsWith(".xlsx")) {
-            out.textContent = "?? ???? ?? ??????? ?? ????????? ???? XLS/XLSX ???????.";
+            out.textContent = "За увоз на ваучери се поддржани само XLS/XLSX фајлови.";
             return;
           }
           const dataBase64 = await fileToBase64(file);
-          const ok = await callUpload("/admin/vouchers/import", {
+          const ok = await callПрикачи("/admin/vouchers/import", {
             fileName: file.name,
             dataBase64,
           });
@@ -749,13 +749,13 @@
             await loadVoucherList();
           }
         } catch (error) {
-          out.textContent = String(error?.message || error || "?????? ?? ??????? ?? ?????.");
+          out.textContent = String(error?.message || error || "Увозот на ваучери не успеа.");
         } finally {
           voucherFileInput.value = "";
         }
       }
 
-      function openHomeTopUpload() {
+      function openHomeTopПрикачи() {
         homeTopFileInput.click();
       }
 
@@ -768,11 +768,11 @@
           const allowedMime = ["image/png", "image/jpeg", "image/webp"];
           const allowedExt = ["png", "jpg", "jpeg", "webp"];
           if (!allowedMime.includes(mimeType) && !allowedExt.includes(ext)) {
-            out.textContent = "?? ??????? ???? ?? ????????? ???? PNG/JPG/WEBP ???????.";
+            out.textContent = "За горното поле се поддржани само PNG/JPG/WEBP фајлови.";
             return;
           }
           const dataBase64 = await fileToBase64(file);
-          const ok = await callUpload("/admin/home-top/upload", {
+          const ok = await callПрикачи("/admin/home-top/upload", {
             fileName: file.name,
             targetFile: `home-top-${Date.now()}-${file.name}`,
             mimeType,
@@ -780,25 +780,25 @@
           });
           if (ok) await loadHomeTopField();
         } catch (error) {
-          out.textContent = String(error?.message || error || "????????????? ?? ??????? ???? ?? ?????.");
+          out.textContent = String(error?.message || error || "Прикачувањето на горното поле не успеа.");
         } finally {
           homeTopFileInput.value = "";
         }
       }
 
       async function deleteHomeTopField() {
-        if (!confirm("?? ?? ??????? ??????? ?? ??????? ?????")) return;
-        const ok = await callDelete("/admin/home-top");
+        if (!confirm("Да се избрише сликата од горното поле?")) return;
+        const ok = await callИзбриши("/admin/home-top");
         if (ok) await loadHomeTopField();
       }
 
-      function openReplaceUpload(group, file) {
-        pendingUploadTarget = { mode: "replace", group, file };
+      function openReplaceПрикачи(group, file) {
+        pendingПрикачиTarget = { mode: "replace", group, file };
         galleryFileInput.click();
       }
 
-      function openNewUpload(group) {
-        pendingUploadTarget = { mode: "new", group, file: "", createdAt: Date.now() };
+      function openNewПрикачи(group) {
+        pendingПрикачиTarget = { mode: "new", group, file: "", createdAt: Date.now() };
         galleryFileInput.click();
       }
 
@@ -810,12 +810,12 @@
             const marker = "base64,";
             const idx = result.indexOf(marker);
             if (idx < 0) {
-              reject(new Error("?? ????? ??????????? ?? ??????."));
+              reject(new Error("Не успеа обработката на фајлот."));
               return;
             }
             resolve(result.slice(idx + marker.length));
           };
-          reader.onerror = () => reject(new Error("?? ????? ???????? ?? ??????."));
+          reader.onerror = () => reject(new Error("Не успеа читањето на фајлот."));
           reader.readAsDataURL(file);
         });
       }
@@ -852,31 +852,31 @@
       async function handleGalleryFilePicked(event) {
         try {
           const file = event?.target?.files?.[0];
-          if (!file || !pendingUploadTarget) return;
+          if (!file || !pendingПрикачиTarget) return;
           const mimeType = String(file.type || "").toLowerCase();
           const ext = String(file.name || "").toLowerCase().split(".").pop() || "";
           const allowedMime = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
           const allowedExt = ["png", "jpg", "jpeg", "webp", "pdf"];
           if (!allowedMime.includes(mimeType) && !allowedExt.includes(ext)) {
-            out.textContent = "????????? ?? ???? PNG/JPG/WEBP/PDF ???????.";
+            out.textContent = "Поддржани се само PNG/JPG/WEBP/PDF фајлови.";
             return;
           }
           const dataBase64 = await fileToBase64(file);
           const thumbnailBase64 = await buildPdfThumbnailBase64(file);
-          let targetFile = pendingUploadTarget.file;
-          if (pendingUploadTarget.mode === "new") {
+          let targetFile = pendingПрикачиTarget.file;
+          if (pendingПрикачиTarget.mode === "new") {
             const originalName = String(file.name || "").trim() || "new-file";
             const dotIndex = originalName.lastIndexOf(".");
             if (dotIndex > 0) {
               const base = originalName.slice(0, dotIndex);
               const ext = originalName.slice(dotIndex);
-              targetFile = `${base}-${pendingUploadTarget.createdAt || Date.now()}${ext}`;
+              targetFile = `${base}-${pendingПрикачиTarget.createdAt || Date.now()}${ext}`;
             } else {
-              targetFile = `${originalName}-${pendingUploadTarget.createdAt || Date.now()}`;
+              targetFile = `${originalName}-${pendingПрикачиTarget.createdAt || Date.now()}`;
             }
           }
-          const ok = await callUpload("/admin/apk-gallery/upload", {
-            group: pendingUploadTarget.group,
+          const ok = await callПрикачи("/admin/apk-gallery/upload", {
+            group: pendingПрикачиTarget.group,
             targetFile,
             fileName: file.name,
             mimeType,
@@ -885,35 +885,35 @@
           });
           if (ok) await loadApkGallery();
         } catch (error) {
-          out.textContent = String(error?.message || error || "????????????? ?? ?????.");
+          out.textContent = String(error?.message || error || "Прикачувањето не успеа.");
         } finally {
-          pendingUploadTarget = null;
+          pendingПрикачиTarget = null;
           galleryFileInput.value = "";
         }
       }
 
       async function deleteFlyer(id) {
-        if (!confirm("?? ?? ??????? ????????")) return;
-        const ok = await callDelete("/admin/flyers/" + encodeURIComponent(id));
+        if (!confirm("Дали да се избрише летокот?")) return;
+        const ok = await callИзбриши("/admin/flyers/" + encodeURIComponent(id));
         if (ok) await loadFlyers();
       }
 
       async function deleteNotification(id) {
-        if (!confirm("?? ?? ??????? ??????????????")) return;
-        const ok = await callDelete("/admin/notifications/" + encodeURIComponent(id));
+        if (!confirm("Дали да се избрише известувањето?")) return;
+        const ok = await callИзбриши("/admin/notifications/" + encodeURIComponent(id));
         if (ok) await loadNotifications();
       }
 
       async function deletePrice(barcode) {
-        if (!confirm("?? ?? ??????? ???????")) return;
-        const ok = await callDelete("/admin/prices/" + encodeURIComponent(barcode));
+        if (!confirm("Дали да се избрише цената?")) return;
+        const ok = await callИзбриши("/admin/prices/" + encodeURIComponent(barcode));
         if (ok) await loadPrices();
       }
 
       async function deleteGalleryItem(group, file) {
         if (!group || !file) return;
-        if (!confirm("?? ?? ??????? ???? ?????")) return;
-        const ok = await callDelete("/admin/apk-gallery/" + encodeURIComponent(group) + "/" + encodeURIComponent(file));
+        if (!confirm("Дали да се избрише овој фајл?")) return;
+        const ok = await callИзбриши("/admin/apk-gallery/" + encodeURIComponent(group) + "/" + encodeURIComponent(file));
         if (ok) await loadApkGallery();
       }
 
