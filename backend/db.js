@@ -587,7 +587,18 @@ function createSqliteStore(filePath) {
 }
 
 function createPgStore(connectionString) {
-  const pool = new Pool({ connectionString });
+  const useSsl =
+    String(process.env.PGSSLMODE || "").toLowerCase() === "require" ||
+    String(process.env.PGSSL || "").toLowerCase() === "true" ||
+    /render\.com/i.test(String(connectionString || ""));
+  const pool = new Pool(
+    useSsl
+      ? {
+        connectionString,
+        ssl: { rejectUnauthorized: false },
+      }
+      : { connectionString },
+  );
   const q = (text, params = []) => pool.query(text, params);
 
   return {
