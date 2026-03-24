@@ -17,7 +17,7 @@ services:
       - key: ADMIN_TOKEN
         generateValue: true
       - key: BACKEND_PUBLIC_URL
-        value: https://zito-cms-backend.onrender.com
+        value: https://zito-cms-backend-new.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

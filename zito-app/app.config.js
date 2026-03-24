@@ -1,7 +1,7 @@
 const appJson = require("./app.json");
 
 const defaultApiBase =
-  appJson?.expo?.extra?.apiBase || "https://zito-cms-backend.onrender.com";
+  appJson?.expo?.extra?.apiBase || "https://zito-cms-backend-new.onrender.com";
 const defaultAppEnv = "development";
 
 module.exports = ({ config }) => ({
