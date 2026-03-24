@@ -995,7 +995,7 @@ async function findOrCreateOAuthUser(provider, identity) {
     passwordHash: await bcrypt.hash(crypto.randomUUID(), 10),
     points: 0,
     coupons: 0,
-    cardNumber: await generateUniqueCardNumber(),
+    cardNumber: "",
   };
   await db.createUser(user);
   return user;
@@ -1615,8 +1615,6 @@ app.post("/auth/register", async (req, res) => {
       return res.status(409).json({ error: "Loyalty card is already linked to another profile" });
     }
     assignedCardNumber = submittedCardNumber;
-  } else {
-    assignedCardNumber = await generateUniqueCardNumber();
   }
 
   const user = {

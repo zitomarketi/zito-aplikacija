@@ -180,7 +180,8 @@ type ThemePalette = {
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const FALLBACK_API_BASE = "https://zito-cms-backend.onrender.com";
+const FALLBACK_API_BASE = "https://zito-cms-backend-new.onrender.com";
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 12000;
 const SESSION_TOKEN_KEY = "zito.session.token";
 const THEME_MODE_KEY = "zito.theme.mode";
 const LANGUAGE_CODE_KEY = "zito.language.code";
@@ -212,9 +213,9 @@ const fallbackNotices: Notice[] = [
 ];
 
 const fallbackCard: CardData = {
-  cardNumber: "6899512",
-  barcode: "6899512",
-  qrValue: "ZITO:6899512:u1",
+  cardNumber: "",
+  barcode: "",
+  qrValue: "",
 };
 
 type CurrentFlyerMock = {
@@ -3421,6 +3422,23 @@ async function registerForPush(t: (key: string) => string): Promise<string> {
   return token.data;
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return await new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("timeout"));
+    }, timeoutMs);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 export default function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [language, setLanguageState] = useState<LanguageCode>("mk");
@@ -3509,6 +3527,7 @@ export default function App() {
 
     try {
       setAuthError("");
+      setCard({ cardNumber: "", barcode: "", qrValue: "" });
       setAuthToken(token);
       await saveSessionToken(token);
       setLoggedIn(true);
@@ -3603,12 +3622,23 @@ export default function App() {
       try {
         const savedToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
         if (savedToken) {
+          setCard({ cardNumber: "", barcode: "", qrValue: "" });
           setAuthToken(savedToken);
-          await loadData(savedToken);
-          if (mounted) setLoggedIn(true);
+          try {
+            await withTimeout(loadData(savedToken), AUTH_BOOTSTRAP_TIMEOUT_MS);
+            if (mounted) setLoggedIn(true);
+          } catch {
+            await clearSessionToken();
+            if (mounted) {
+              setCard({ cardNumber: "", barcode: "", qrValue: "" });
+              setAuthToken("");
+              setLoggedIn(false);
+            }
+          }
         }
       } catch {
         await clearSessionToken();
+        if (mounted) setCard({ cardNumber: "", barcode: "", qrValue: "" });
       } finally {
         if (mounted) setIsAuthBootstrapping(false);
       }
@@ -3643,6 +3673,7 @@ export default function App() {
     try {
       setAuthError("");
       const res = await apiPost<{ token: string; user: User }>(apiBase, "/auth/login", { email, password });
+      setCard({ cardNumber: "", barcode: "", qrValue: "" });
       setAuthToken(res.token);
       await saveSessionToken(res.token);
       setUser(res.user);
@@ -3662,6 +3693,7 @@ export default function App() {
         "/auth/register",
         { name, email, password, loyaltyCardNumber },
       );
+      setCard({ cardNumber: "", barcode: "", qrValue: "" });
       setAuthToken(res.token);
       await saveSessionToken(res.token);
       setUser(res.user);
@@ -3670,6 +3702,10 @@ export default function App() {
       await loadData(res.token);
     } catch (error) {
       const apiError = extractApiErrorMessage(error).toLowerCase();
+      if (apiError.includes("email already exists")) {
+        setAuthError(t("state_profile_email_exists"));
+        return;
+      }
       if (apiError.includes("already linked")) {
         setAuthError(t("auth_card_linked"));
         return;
