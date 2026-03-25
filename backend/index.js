@@ -42,7 +42,10 @@ const APK_ASSET_GROUP_DIRS = {
 };
 const db = dbFactory();
 const oauthStateStore = new Map();
+const oauthResultStore = new Map();
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const OAUTH_RESULT_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_MOBILE_OAUTH_REDIRECT_URI = "zitoapp://oauth/callback";
 const MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
 const JSON_BODY_LIMIT = "80mb";
 const ASSET_MIME_TO_EXT = {
@@ -1026,6 +1029,25 @@ function sendMobileOAuthRedirect(req, res, appRedirectUrl) {
 </html>`);
 }
 
+function rememberOAuthResult(state, appRedirectUrl) {
+  if (!state) return;
+  oauthResultStore.set(state, {
+    appRedirectUrl,
+    createdAt: Date.now(),
+  });
+}
+
+function getRememberedOAuthResult(state) {
+  if (!state) return null;
+  const remembered = oauthResultStore.get(state);
+  if (!remembered) return null;
+  if (Date.now() - remembered.createdAt > OAUTH_RESULT_TTL_MS) {
+    oauthResultStore.delete(state);
+    return null;
+  }
+  return remembered.appRedirectUrl;
+}
+
 function getOAuthProviderConfig(provider) {
   if (provider === "google") {
     return {
@@ -1785,13 +1807,30 @@ app.get("/auth/oauth/:provider/callback", async (req, res) => {
   const state = String(req.query.state || "");
   const code = String(req.query.code || "");
   const stateData = oauthStateStore.get(state);
-  oauthStateStore.delete(state);
+  const rememberedRedirect = getRememberedOAuthResult(state);
 
-  if (!stateData || stateData.provider !== provider || !code) {
-    return res.status(400).send("Invalid OAuth callback state/code");
+  if (!stateData) {
+    if (rememberedRedirect) {
+      return sendMobileOAuthRedirect(req, res, rememberedRedirect);
+    }
+    const appRedirect = new URL(DEFAULT_MOBILE_OAUTH_REDIRECT_URI);
+    appRedirect.searchParams.set("error", "oauth_failed");
+    return sendMobileOAuthRedirect(req, res, appRedirect.toString());
+  }
+
+  if (stateData.provider !== provider || !code) {
+    const appRedirect = new URL(stateData.redirectUriMobile || DEFAULT_MOBILE_OAUTH_REDIRECT_URI);
+    appRedirect.searchParams.set("error", "oauth_failed");
+    rememberOAuthResult(state, appRedirect.toString());
+    oauthStateStore.delete(state);
+    return sendMobileOAuthRedirect(req, res, appRedirect.toString());
   }
   if (Date.now() - stateData.createdAt > OAUTH_STATE_TTL_MS) {
-    return res.status(400).send("OAuth state expired");
+    const appRedirect = new URL(stateData.redirectUriMobile || DEFAULT_MOBILE_OAUTH_REDIRECT_URI);
+    appRedirect.searchParams.set("error", "oauth_failed");
+    rememberOAuthResult(state, appRedirect.toString());
+    oauthStateStore.delete(state);
+    return sendMobileOAuthRedirect(req, res, appRedirect.toString());
   }
 
   try {
@@ -1829,10 +1868,14 @@ app.get("/auth/oauth/:provider/callback", async (req, res) => {
 
     const appRedirect = new URL(stateData.redirectUriMobile);
     appRedirect.searchParams.set("token", appToken);
+    rememberOAuthResult(state, appRedirect.toString());
+    oauthStateStore.delete(state);
     return sendMobileOAuthRedirect(req, res, appRedirect.toString());
   } catch (_error) {
     const appRedirect = new URL(stateData.redirectUriMobile);
     appRedirect.searchParams.set("error", "oauth_failed");
+    rememberOAuthResult(state, appRedirect.toString());
+    oauthStateStore.delete(state);
     return sendMobileOAuthRedirect(req, res, appRedirect.toString());
   }
 });
