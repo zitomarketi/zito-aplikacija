@@ -8,6 +8,18 @@ Current branch/head: `main` @ `986dd5f`
 ## Goal
 Transfer full technical ownership from current owner to new owner with minimal downtime and no data loss.
 
+## Current snapshot
+- Completed today:
+  - Expo ownership moved to `zitomarketi`
+  - GitHub repo pushed to `zitomarketi/zito-aplikacija`
+  - Android login flow hardened and crash fixed
+  - flyer carousel scrolling stabilized again
+  - new backend OAuth callback handling deployed
+- Remaining next:
+  - create and attach the new Postgres instance
+  - finish Facebook login migration
+  - run final smoke QA after those two items
+
 ## Rules (must follow)
 1. Do not delete old accounts until cutover is complete and verified.
 2. Add new owner as admin first, then transfer ownership.
@@ -106,6 +118,7 @@ Status: IN PROGRESS
 
 2. Data migration:
 - [x] Backup current production DB.
+- [ ] Create and wire the new Postgres instance on the new owner infra.
 - [ ] Restore DB on new owner infra. (blocked by Render Postgres provisioning/support)
 - [ ] Validate critical tables (users, push_tokens, product_prices, vouchers if active, cms assets).
 

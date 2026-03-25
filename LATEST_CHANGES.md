@@ -1,5 +1,24 @@
 # Latest Changes
 
+## March 25, 2026 - [Snapshot] Current state after today's transfer and login fixes
+- What is now in place:
+  - Expo project ownership moved to `zitomarketi`
+  - GitHub repo pushed to `zitomarketi/zito-aplikacija`
+  - new Render backend services validated
+  - Google OAuth redirect now points to the new backend callback
+  - Android OAuth deep-link handling was hardened with `onNewIntent` support
+  - Google login flow was moved to `expo-web-browser` auth session
+  - first-login crash caused by empty flyer carousel was fixed
+  - flyer carousel scrolling was stabilized again after the crash fix
+- What was verified on device:
+  - release APK rebuilt and installed multiple times on the connected Samsung phone
+  - Google login no longer depends on a manual app restart path
+  - `Тековни летоци` carousel scrolling was restored after the guard adjustment
+- What still remains:
+  - create/attach the new Postgres instance on the new owner infra
+  - finish Facebook login migration and verify the redirect flow
+  - final end-to-end smoke test after Postgres + Facebook are done
+
 ## March 24, 2026 - [Ownership Transfer] New owner infrastructure cutover in progress
 - Ownership/migration progress captured for new owner handover:
   - GitHub repo transferred to `zitomarketi/zito-aplikacija`
