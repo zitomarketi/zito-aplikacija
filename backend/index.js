@@ -939,6 +939,93 @@ function getBackendBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildAndroidIntentUrl(appRedirectUrl) {
+  const deepLink = new URL(appRedirectUrl);
+  const scheme = deepLink.protocol.replace(/:$/, "");
+  const host = deepLink.host;
+  const path = `${deepLink.pathname || ""}${deepLink.search || ""}${deepLink.hash || ""}`;
+  return `intent://${host}${path}#Intent;scheme=${scheme};package=com.anonymous.zitoapp;end`;
+}
+
+function sendMobileOAuthRedirect(req, res, appRedirectUrl) {
+  const userAgent = String(req.headers["user-agent"] || "");
+  const isAndroid = /android/i.test(userAgent);
+  const primaryUrl = isAndroid ? buildAndroidIntentUrl(appRedirectUrl) : appRedirectUrl;
+  const fallbackUrl = appRedirectUrl;
+
+  return res
+    .status(200)
+    .type("html")
+    .send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Opening Zito app</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #111111;
+        color: #f4f4f4;
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+      }
+      main {
+        width: min(420px, calc(100vw - 32px));
+        padding: 24px;
+        border-radius: 16px;
+        background: #1a1a1a;
+        border: 1px solid #2d2d2d;
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 24px;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #c9c9c9;
+        line-height: 1.5;
+      }
+      a {
+        display: inline-block;
+        padding: 12px 18px;
+        border-radius: 10px;
+        background: #00a651;
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Opening Zito app...</h1>
+      <p>If the app does not open automatically, tap the button below.</p>
+      <a href="${escapeHtml(fallbackUrl)}">Open app</a>
+    </main>
+    <script>
+      window.location.replace(${JSON.stringify(primaryUrl)});
+      setTimeout(function () {
+        window.location.replace(${JSON.stringify(fallbackUrl)});
+      }, 1200);
+    </script>
+  </body>
+</html>`);
+}
+
 function getOAuthProviderConfig(provider) {
   if (provider === "google") {
     return {
@@ -1742,11 +1829,11 @@ app.get("/auth/oauth/:provider/callback", async (req, res) => {
 
     const appRedirect = new URL(stateData.redirectUriMobile);
     appRedirect.searchParams.set("token", appToken);
-    return res.redirect(appRedirect.toString());
+    return sendMobileOAuthRedirect(req, res, appRedirect.toString());
   } catch (_error) {
     const appRedirect = new URL(stateData.redirectUriMobile);
     appRedirect.searchParams.set("error", "oauth_failed");
-    return res.redirect(appRedirect.toString());
+    return sendMobileOAuthRedirect(req, res, appRedirect.toString());
   }
 });
 
