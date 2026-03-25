@@ -1491,14 +1491,16 @@ function HomeScreen({
   };
 
   useEffect(() => {
+    if (baseFlyersCount < 1 || endlessFlyers.length < 1) return undefined;
     const targetIndex = baseFlyersCount;
     const timer = setTimeout(() => {
       flyersListRef.current?.scrollToIndex({ index: targetIndex, animated: false });
     }, 0);
     return () => clearTimeout(timer);
-  }, [baseFlyersCount, currentFlyersItemSize]);
+  }, [baseFlyersCount, currentFlyersItemSize, endlessFlyers.length]);
 
   const recenterFlyersIfNeeded = (offsetX: number) => {
+    if (baseFlyersCount < 1 || endlessFlyers.length < 1) return;
     const rawIndex = Math.round(offsetX / currentFlyersItemSize);
     if (rawIndex < baseFlyersCount) {
       flyersListRef.current?.scrollToIndex({ index: rawIndex + baseFlyersCount, animated: false });
@@ -1556,10 +1558,12 @@ function HomeScreen({
               offset: currentFlyersItemSize * index,
               index,
             })}
-            initialScrollIndex={baseFlyersCount}
+            initialScrollIndex={baseFlyersCount > 0 ? baseFlyersCount : undefined}
             onMomentumScrollEnd={(event) => recenterFlyersIfNeeded(event.nativeEvent.contentOffset.x)}
             onScrollToIndexFailed={(info) => {
-              setTimeout(() => flyersListRef.current?.scrollToIndex({ index: info.index, animated: false }), 50);
+              if (endlessFlyers.length < 1) return;
+              const safeIndex = Math.max(0, Math.min(info.index, endlessFlyers.length - 1));
+              setTimeout(() => flyersListRef.current?.scrollToIndex({ index: safeIndex, animated: false }), 50);
             }}
             renderItem={({ item }) => {
               const targetUrl = normalizeExternalFlyerUrl(item.imageUrl);
