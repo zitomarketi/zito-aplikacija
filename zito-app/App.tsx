@@ -1398,10 +1398,12 @@ function HomeScreen({
   const currentFlyersItemSize = currentCardWidth + currentFlyersGap;
   const currentFlyersData = currentFlyers;
   const baseFlyersCount = currentFlyersData.length;
+  const hasFlyerCarouselLoop = baseFlyersCount > 1;
   const endlessFlyers = useMemo(
     () => [...currentFlyersData, ...currentFlyersData, ...currentFlyersData],
     [currentFlyersData],
   );
+  const flyerCarouselData = hasFlyerCarouselLoop ? endlessFlyers : currentFlyersData;
   const flyersListRef = useRef<FlatList<CurrentFlyerMock> | null>(null);
   const [homeTopAspectRatio, setHomeTopAspectRatio] = useState(16 / 6);
   const [activePdfUrl, setActivePdfUrl] = useState("");
@@ -1491,16 +1493,16 @@ function HomeScreen({
   };
 
   useEffect(() => {
-    if (baseFlyersCount < 1 || endlessFlyers.length < 1) return undefined;
+    if (!hasFlyerCarouselLoop || endlessFlyers.length < 1) return undefined;
     const targetIndex = baseFlyersCount;
     const timer = setTimeout(() => {
       flyersListRef.current?.scrollToIndex({ index: targetIndex, animated: false });
     }, 0);
     return () => clearTimeout(timer);
-  }, [baseFlyersCount, currentFlyersItemSize, endlessFlyers.length]);
+  }, [baseFlyersCount, currentFlyersItemSize, endlessFlyers.length, hasFlyerCarouselLoop]);
 
   const recenterFlyersIfNeeded = (offsetX: number) => {
-    if (baseFlyersCount < 1 || endlessFlyers.length < 1) return;
+    if (!hasFlyerCarouselLoop || endlessFlyers.length < 1) return;
     const rawIndex = Math.round(offsetX / currentFlyersItemSize);
     if (rawIndex < baseFlyersCount) {
       flyersListRef.current?.scrollToIndex({ index: rawIndex + baseFlyersCount, animated: false });
@@ -1547,9 +1549,10 @@ function HomeScreen({
           <OutlinedHeader text={t("home_current_flyers")} />
           <FlatList
             ref={flyersListRef}
-            data={endlessFlyers}
+            data={flyerCarouselData}
             horizontal
             keyExtractor={(item, index) => `${item.id}-${index}`}
+            nestedScrollEnabled
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.currentFlyersRow}
             ItemSeparatorComponent={() => <View style={{ width: currentFlyersGap }} />}
@@ -1558,11 +1561,11 @@ function HomeScreen({
               offset: currentFlyersItemSize * index,
               index,
             })}
-            initialScrollIndex={baseFlyersCount > 0 ? baseFlyersCount : undefined}
+            initialScrollIndex={hasFlyerCarouselLoop ? baseFlyersCount : undefined}
             onMomentumScrollEnd={(event) => recenterFlyersIfNeeded(event.nativeEvent.contentOffset.x)}
             onScrollToIndexFailed={(info) => {
-              if (endlessFlyers.length < 1) return;
-              const safeIndex = Math.max(0, Math.min(info.index, endlessFlyers.length - 1));
+              if (flyerCarouselData.length < 1) return;
+              const safeIndex = Math.max(0, Math.min(info.index, flyerCarouselData.length - 1));
               setTimeout(() => flyersListRef.current?.scrollToIndex({ index: safeIndex, animated: false }), 50);
             }}
             renderItem={({ item }) => {
