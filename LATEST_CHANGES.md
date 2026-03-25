@@ -1,5 +1,27 @@
 # Latest Changes
 
+## March 24, 2026 - [Ownership Transfer] New owner infrastructure cutover in progress
+- Ownership/migration progress captured for new owner handover:
+  - GitHub repo transferred to `zitomarketi/zito-aplikacija`
+  - local git remote repointed to new owner repository
+  - fail-safe backups created locally:
+    - full git bundle
+    - DB dump + schema dump
+    - environment backup snapshots
+- New Render services under new owner were created and validated:
+  - `zito-backend-new` -> `/health` returns `ok`
+  - `zito-cms-backend-new` -> `/health`, `/admin.html`, `/cms/apk-gallery` validated
+- Backend SSL fix for Render Postgres added:
+  - commit `474c8c9` (`Fix Render Postgres SSL connection`)
+  - fix ensures Postgres SSL config is applied for Render-hosted DB connections
+- Google OAuth migration started on new owner Google Cloud project (`zito-production`):
+  - new OAuth client created
+  - redirect URI configured for:
+    - `https://zito-cms-backend-new.onrender.com/auth/oauth/google/callback`
+- Current status:
+  - old mobile build still opens old domain in OAuth flow
+  - new mobile release build/install with new API base is in progress to complete full cutover
+
 ## March 13, 2026 - [Mobile/Analytics] Flyers screen renamed to analysis
 - Updated the former flyers analytics screen naming in the mobile app:
   - screen title changed from `Digital Flyers` / `Дигитални флаери` to `Detailed Analysis` / `Детална анализа`
