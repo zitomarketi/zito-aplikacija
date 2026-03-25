@@ -4,6 +4,7 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
+import * as WebBrowser from "expo-web-browser";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator, useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -3755,7 +3756,15 @@ export default function App() {
       }
       const oauthStartUrl =
         `${apiBase}/auth/oauth/${provider}/start?redirect_uri=${encodeURIComponent(OAUTH_REDIRECT_URI)}`;
-      await Linking.openURL(oauthStartUrl);
+      const result = await WebBrowser.openAuthSessionAsync(oauthStartUrl, OAUTH_REDIRECT_URI);
+      if (result.type === "success" && result.url) {
+        await consumeOAuthCallback(result.url);
+        return;
+      }
+      if (result.type === "cancel" || result.type === "dismiss") {
+        return;
+      }
+      setAuthError(t("auth_oauth_failed"));
     } catch {
       setAuthError(t("auth_oauth_start_failed"));
     }
