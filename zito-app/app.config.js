@@ -8,7 +8,11 @@ module.exports = ({ config }) => ({
   ...config,
   ...appJson.expo,
   plugins: Array.from(
-    new Set([...(appJson.expo.plugins || []), "@react-native-community/datetimepicker"]),
+    new Set([
+      ...(appJson.expo.plugins || []),
+      "@react-native-community/datetimepicker",
+      "./plugins/with-oauth-intent-fix",
+    ]),
   ),
   extra: {
     ...(appJson.expo.extra || {}),
