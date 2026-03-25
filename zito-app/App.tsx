@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  AppState,
   FlatList,
   Image,
   Linking,
@@ -3463,6 +3464,11 @@ export default function App() {
   const [pushState, setPushState] = useState(t("state_unregistered"));
   const [profileState, setProfileState] = useState("-");
   const autoPushAttemptedRef = useRef(false);
+  const authTokenRef = useRef("");
+
+  useEffect(() => {
+    authTokenRef.current = authToken;
+  }, [authToken]);
 
   useEffect(() => {
     const loadShoppingItems = async () => {
@@ -3531,9 +3537,11 @@ export default function App() {
       setAuthToken(token);
       await saveSessionToken(token);
       setLoggedIn(true);
-      await loadData(token);
+      void loadData(token).catch(() => {
+        setPushState(t("state_backend_unavailable"));
+      });
     } catch {
-      setAuthError(t("auth_oauth_data_missing"));
+      setAuthError(t("auth_oauth_failed"));
     }
   };
 
@@ -3626,13 +3634,15 @@ export default function App() {
           setAuthToken(savedToken);
           try {
             await withTimeout(loadData(savedToken), AUTH_BOOTSTRAP_TIMEOUT_MS);
-            if (mounted) setLoggedIn(true);
+            if (mounted && authTokenRef.current === savedToken) setLoggedIn(true);
           } catch {
-            await clearSessionToken();
-            if (mounted) {
-              setCard({ cardNumber: "", barcode: "", qrValue: "" });
-              setAuthToken("");
-              setLoggedIn(false);
+            if (authTokenRef.current === savedToken) {
+              await clearSessionToken();
+              if (mounted) {
+                setCard({ cardNumber: "", barcode: "", qrValue: "" });
+                setAuthToken("");
+                setLoggedIn(false);
+              }
             }
           }
         }
@@ -3669,6 +3679,20 @@ export default function App() {
     return () => sub.remove();
   }, []);
 
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      Linking.getInitialURL()
+        .then((url) => {
+          if (url) void consumeOAuthCallback(url);
+        })
+        .catch(() => {
+          // Ignore app-state URL errors.
+        });
+    });
+    return () => sub.remove();
+  }, []);
+
   const handleEmailLogin = async (email: string, password: string) => {
     try {
       setAuthError("");
@@ -3679,7 +3703,9 @@ export default function App() {
       setUser(res.user);
       setProfileState("-");
       setLoggedIn(true);
-      await loadData(res.token);
+      void loadData(res.token).catch(() => {
+        setPushState(t("state_backend_unavailable"));
+      });
     } catch {
       setAuthError(t("auth_invalid_login"));
     }
@@ -3699,7 +3725,9 @@ export default function App() {
       setUser(res.user);
       setProfileState("-");
       setLoggedIn(true);
-      await loadData(res.token);
+      void loadData(res.token).catch(() => {
+        setPushState(t("state_backend_unavailable"));
+      });
     } catch (error) {
       const apiError = extractApiErrorMessage(error).toLowerCase();
       if (apiError.includes("email already exists")) {
