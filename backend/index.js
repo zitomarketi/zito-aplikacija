@@ -963,7 +963,7 @@ function sendMobileOAuthRedirect(req, res, appRedirectUrl) {
   const userAgent = String(req.headers["user-agent"] || "");
   const isAndroid = /android/i.test(userAgent);
   const primaryUrl = isAndroid ? buildAndroidIntentUrl(appRedirectUrl) : appRedirectUrl;
-  const fallbackUrl = appRedirectUrl;
+  const actionUrl = primaryUrl;
 
   return res
     .status(200)
@@ -1017,13 +1017,10 @@ function sendMobileOAuthRedirect(req, res, appRedirectUrl) {
     <main>
       <h1>Opening Zito app...</h1>
       <p>If the app does not open automatically, tap the button below.</p>
-      <a href="${escapeHtml(fallbackUrl)}">Open app</a>
+      <a href="${escapeHtml(actionUrl)}">Open app</a>
     </main>
     <script>
       window.location.replace(${JSON.stringify(primaryUrl)});
-      setTimeout(function () {
-        window.location.replace(${JSON.stringify(fallbackUrl)});
-      }, 1200);
     </script>
   </body>
 </html>`);
